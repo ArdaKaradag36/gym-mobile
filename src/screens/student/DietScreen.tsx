@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -10,19 +11,23 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StudentScreenShell } from '../../components/student/StudentScreenShell';
+import { formatKcal, sumFoodMacros } from '../../forms/macros';
 import type { StudentDietStackParamList } from '../../navigation/StudentDietStack';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useStudentDayStore } from '../../stores/useStudentDayStore';
 import { formatShortDate, todayIsoDate } from '../../utils/format';
+import { screenBottomPadding } from '../../utils/layout';
 
 type Props = NativeStackScreenProps<StudentDietStackParamList, 'DietDays'>;
 
 export function DietScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const studentId = useAuthStore((state) => state.profile?.id);
   const { days, loading, error, load } = useStudentDayStore();
 
@@ -30,16 +35,20 @@ export function DietScreen({ navigation }: Props) {
     if (studentId) void load(studentId);
   }, [load, studentId]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!studentId) return;
+      const hasData = useStudentDayStore.getState().days.length > 0;
+      void load(studentId, { silent: hasData });
+    }, [load, studentId]),
+  );
 
   const today = todayIsoDate();
 
   return (
     <StudentScreenShell>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: screenBottomPadding(insets) }]}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.neonGreen} />
         }
@@ -53,6 +62,12 @@ export function DietScreen({ navigation }: Props) {
         {days.map((day) => {
           const done =
             day.daily_diets.length > 0 && day.daily_diets.every((item) => item.is_completed);
+          const visibleFoods = day.daily_diets.flatMap((meal) =>
+            (meal.diet_foods ?? []).filter(
+              (food) => day.is_training_day || !food.training_day_only,
+            ),
+          );
+          const kcal = Math.round(sumFoodMacros(visibleFoods).kcal);
           return (
             <Pressable
               key={day.id}
@@ -72,6 +87,7 @@ export function DietScreen({ navigation }: Props) {
                 </Text>
                 <Text style={[styles.meta, { color: colors.onSurfaceVariant }]}>
                   {day.daily_diets.length} öğün
+                  {kcal > 0 ? ` · ${formatKcal(kcal)} kcal` : ''}
                 </Text>
               </View>
               {done ? (
@@ -97,7 +113,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.marginPage,
     paddingTop: spacing.stackLg,
-    paddingBottom: 120,
     gap: spacing.stackSm,
   },
   title: {

@@ -63,14 +63,14 @@ export default function App() {
   const fontsReady = (interLoaded && montserratLoaded) || fontWaitTimedOut;
 
   useEffect(() => {
+    SplashScreen.hideAsync().catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     if (fontsReady) {
       SplashScreen.hideAsync().catch(() => undefined);
     }
   }, [fontsReady]);
-
-  if (!fontsReady) {
-    return null;
-  }
 
   return (
     <SafeAreaProvider>

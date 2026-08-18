@@ -17,8 +17,10 @@ export type ProgramTemplateDay = {
     meal_type: MealType;
     content: string;
     foods?: Array<{
+      food_id?: string;
       food_name: string;
       amount?: string;
+      amount_in_grams?: number;
       note?: string;
       training_day_only?: boolean;
     }>;
@@ -105,15 +107,15 @@ function validateArgs(
   startDate: string,
   programTemplateJson: ProgramTemplateJson,
 ): string | null {
-  if (!studentId?.trim()) return 'student_id is required.';
+  if (!studentId?.trim()) return 'Öğrenci seçilmedi.';
   if (!ISO_DATE_RE.test(startDate)) {
-    return 'start_date must be an ISO date string (YYYY-MM-DD).';
+    return 'Başlangıç tarihi YYYY-AA-GG olmalı.';
   }
   if (!programTemplateJson || !Array.isArray(programTemplateJson.days)) {
-    return 'program_template_json.days must be an array.';
+    return 'Program şablonunda gün listesi olmalı.';
   }
   if (programTemplateJson.days.length === 0) {
-    return 'program_template_json.days cannot be empty.';
+    return 'Program şablonunda en az bir gün olmalı.';
   }
   return null;
 }
@@ -124,7 +126,7 @@ async function rollbackProgramAssignment(programId: string): Promise<void> {
 
 function failure(
   error: string,
-  message = 'Failed to assign the 2-week program.',
+  message = '14 günlük program atanamadı.',
   programId?: string,
 ): AssignTwoWeekProgramFailure {
   return {
@@ -146,8 +148,8 @@ export async function assignTwoWeekProgram(
 ): Promise<AssignTwoWeekProgramResult> {
   if (!isSupabaseConfigured) {
     return failure(
-      'Supabase is not configured.',
-      'Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY to continue.',
+      'Supabase ayarlı değil.',
+      'Devam etmek için EXPO_PUBLIC_SUPABASE_URL ve EXPO_PUBLIC_SUPABASE_ANON_KEY ekle.',
     );
   }
 
@@ -168,7 +170,7 @@ export async function assignTwoWeekProgram(
         trainer_id: trainerId ?? null,
         start_date: startDate,
         end_date: endDate,
-        title: programTemplateJson.title ?? '14-day program',
+        title: programTemplateJson.title ?? '14 günlük program',
         status: 'draft',
       })
       .select('id, student_id, start_date, end_date')
@@ -176,8 +178,8 @@ export async function assignTwoWeekProgram(
 
     if (programError || !programRow) {
       return failure(
-        programError?.message ?? 'Program insert returned no row.',
-        'Could not create the program record.',
+        programError?.message ?? 'Program kaydı oluşturulamadı.',
+        'Program kaydı oluşturulamadı.',
       );
     }
 
@@ -203,8 +205,8 @@ export async function assignTwoWeekProgram(
     if (plansError || !planRows?.length) {
       await rollbackProgramAssignment(programId);
       return failure(
-        plansError?.message ?? 'Daily plans insert returned no rows.',
-        'Program was rolled back because daily plans could not be created.',
+        plansError?.message ?? 'Günlük planlar oluşturulamadı.',
+        'Günlük planlar oluşturulamadığı için program geri alındı.',
         programId,
       );
     }
@@ -221,7 +223,7 @@ export async function assignTwoWeekProgram(
       const dailyPlanId = planIdByDate.get(date);
       if (!dailyPlanId) {
         await rollbackProgramAssignment(programId);
-        return failure(`Missing daily_plan for ${date}.`, 'Rollback after date mapping error.', programId);
+        return failure(`${date} için günlük plan eksik.`, 'Tarih eşlemesi hatası, program geri alındı.', programId);
       }
 
       const workoutPayloads = (day.workouts ?? []).map((workout, index) => ({
@@ -248,7 +250,7 @@ export async function assignTwoWeekProgram(
         const { error } = await supabase.from('daily_workouts').insert(workoutPayloads);
         if (error) {
           await rollbackProgramAssignment(programId);
-          return failure(error.message, 'Rolled back because workouts failed.', programId);
+          return failure(error.message, 'Antrenmanlar kaydedilemedi, program geri alındı.', programId);
         }
         workoutCount += workoutPayloads.length;
       }
@@ -267,25 +269,30 @@ export async function assignTwoWeekProgram(
 
         if (dietError) {
           await rollbackProgramAssignment(programId);
-          return failure(dietError.message, 'Rolled back because diets failed.', programId);
+          return failure(dietError.message, 'Diyetler kaydedilemedi, program geri alındı.', programId);
         }
         dietCount += 1;
 
-        const foods = diet.foods?.filter((food) => food.food_name.trim()) ?? [];
+        const foods = diet.foods?.filter((food) => food.food_id?.trim() || food.food_name.trim()) ?? [];
         if (foods.length > 0 && dietRow) {
           const { error: foodError } = await supabase.from('diet_foods').insert(
-            foods.map((food, index) => ({
-              daily_diet_id: dietRow.id,
-              food_name: food.food_name,
-              amount: food.amount ?? null,
-              note: food.note ?? null,
-              training_day_only: food.training_day_only ?? false,
-              order_index: index,
-            })),
+            foods.map((food, index) => {
+              const grams = food.amount_in_grams ?? null;
+              return {
+                daily_diet_id: dietRow.id,
+                food_id: food.food_id?.trim() || null,
+                food_name: food.food_name,
+                amount: food.amount ?? (grams != null ? `${grams} g` : null),
+                amount_in_grams: grams,
+                note: food.note ?? null,
+                training_day_only: food.training_day_only ?? false,
+                order_index: index,
+              };
+            }),
           );
           if (foodError) {
             await rollbackProgramAssignment(programId);
-            return failure(foodError.message, 'Rolled back because diet foods failed.', programId);
+            return failure(foodError.message, 'Besinler kaydedilemedi, program geri alındı.', programId);
           }
         }
       }
@@ -299,7 +306,7 @@ export async function assignTwoWeekProgram(
       dailyPlanCount: planRows.length,
       dietCount,
       workoutCount,
-      message: `Draft 14-day program created (${startDate} → ${endDate}). Publish with ONAYLA.`,
+      message: `14 günlük taslak program oluşturuldu (${startDate} → ${endDate}). ONAYLA ile yayınla.`,
     };
   } catch (err) {
     if (programId) {
@@ -310,7 +317,7 @@ export async function assignTwoWeekProgram(
       }
     }
     const errorMessage =
-      err instanceof Error ? err.message : 'Unexpected error while assigning program.';
-    return failure(errorMessage, 'Program assignment failed.', programId);
+      err instanceof Error ? err.message : 'Program atanırken beklenmeyen hata.';
+    return failure(errorMessage, 'Program ataması başarısız.', programId);
   }
 }

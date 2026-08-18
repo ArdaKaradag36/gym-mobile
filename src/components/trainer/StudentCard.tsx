@@ -92,9 +92,9 @@ export function StudentCard({ student, onPress, onToggleActive }: StudentCardPro
           />
           <StatusChip
             icon="sticky-note-2"
-            label="Not"
-            active={status.hasDailyNote}
-            tone={status.hasDailyNote ? 'blue' : 'muted'}
+            label={status.unreadNotes > 0 ? `Not · ${status.unreadNotes}` : 'Not'}
+            active={status.hasDailyNote || status.unreadNotes > 0}
+            tone={status.unreadNotes > 0 || status.hasDailyNote ? 'blue' : 'muted'}
           />
           <StatusChip
             icon="water-drop"

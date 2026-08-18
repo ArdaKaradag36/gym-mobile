@@ -27,12 +27,12 @@ export function WorkoutHeader({
         <MaterialIcons name="fitness-center" size={16} color={colors.outline} />
         <Text style={[styles.meta, { color: colors.outline }]}>
           {totalCount === 0
-            ? 'No exercises scheduled'
-            : `${completedCount}/${totalCount} exercises complete`}
+            ? 'Bugün hareket yok'
+            : `${completedCount}/${totalCount} hareket tamamlandı`}
         </Text>
         <View style={[styles.dot, { backgroundColor: colors.outlineVariant }]} />
         <MaterialIcons name="bolt" size={16} color={colors.outline} />
-        <Text style={[styles.meta, { color: colors.outline }]}>TODAY</Text>
+        <Text style={[styles.meta, { color: colors.outline }]}>BUGÜN</Text>
       </View>
     </View>
   );

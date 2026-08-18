@@ -12,20 +12,23 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { exerciseVideoUrl, exercisesForMuscleGroup, muscleGroupLabel } from '../../constants/media';
-import type { Exercise } from '../../types/database';
+import { formatMacroNumber } from '../../forms/macros';
+import type { Food, MealType } from '../../types/database';
+import { foodsForMeal, MEAL_LABELS } from '../../types/database';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 import { sheetBottomPadding } from '../../utils/layout';
 
 type ButtonProps = {
-  selected: Exercise | null;
+  selected: Food | null;
+  fallbackName?: string;
   onPress: () => void;
   loading?: boolean;
 };
 
-export function ExercisePickerButton({ selected, onPress, loading = false }: ButtonProps) {
+export function FoodPickerButton({ selected, fallbackName, onPress, loading = false }: ButtonProps) {
   const { colors } = useTheme();
+  const label = selected?.name ?? fallbackName?.trim() ?? '';
 
   return (
     <Pressable
@@ -34,15 +37,15 @@ export function ExercisePickerButton({ selected, onPress, loading = false }: But
         styles.trigger,
         {
           backgroundColor: colors.surfaceContainerLowest,
-          borderColor: pressed ? colors.electricBlue : colors.outlineVariant,
+          borderColor: pressed ? colors.neonGreen : colors.outlineVariant,
         },
       ]}
     >
-      <MaterialIcons name="fitness-center" size={20} color={colors.onSurfaceVariant} />
+      <MaterialIcons name="restaurant" size={20} color={colors.onSurfaceVariant} />
       <View style={styles.triggerText}>
-        <Text style={[styles.triggerLabel, { color: colors.onSurfaceVariant }]}>Egzersiz</Text>
+        <Text style={[styles.triggerLabel, { color: colors.onSurfaceVariant }]}>Besin</Text>
         <Text style={[styles.triggerValue, { color: colors.onSurface }]} numberOfLines={1}>
-          {selected?.name ?? (loading ? 'Yükleniyor…' : 'Kütüphaneden seç')}
+          {label || (loading ? 'Yükleniyor…' : 'Kütüphaneden seç')}
         </Text>
       </View>
       <MaterialIcons name="expand-more" size={22} color={colors.onSurfaceVariant} />
@@ -52,17 +55,17 @@ export function ExercisePickerButton({ selected, onPress, loading = false }: But
 
 type ModalProps = {
   visible: boolean;
-  exercises: Exercise[];
-  muscleGroup?: string | null;
+  foods: Food[];
+  mealType?: MealType | null;
   selectedId?: string | null;
-  onSelect: (exercise: Exercise) => void;
+  onSelect: (food: Food) => void;
   onClose: () => void;
 };
 
-export function ExercisePickerModal({
+export function FoodPickerModal({
   visible,
-  exercises,
-  muscleGroup,
+  foods,
+  mealType,
   selectedId,
   onSelect,
   onClose,
@@ -78,11 +81,11 @@ export function ExercisePickerModal({
       setQuery('');
       setShowAll(false);
     }
-  }, [visible, muscleGroup]);
+  }, [visible, mealType]);
 
   const scoped = useMemo(
-    () => (showAll ? exercises : exercisesForMuscleGroup(exercises, muscleGroup)),
-    [exercises, muscleGroup, showAll],
+    () => (showAll ? foods : foodsForMeal(foods, mealType)),
+    [foods, mealType, showAll],
   );
 
   const filtered = useMemo(() => {
@@ -91,14 +94,13 @@ export function ExercisePickerModal({
     return scoped.filter(
       (item) =>
         item.name.toLowerCase().includes(normalized) ||
-        item.category?.toLowerCase().includes(normalized) ||
-        muscleGroupLabel(item.category).toLowerCase().includes(normalized),
+        item.category?.toLowerCase().includes(normalized),
     );
   }, [query, scoped]);
 
   if (!visible) return null;
 
-  const groupLabel = muscleGroup ? muscleGroupLabel(muscleGroup) : null;
+  const mealLabel = mealType ? MEAL_LABELS[mealType] : null;
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
@@ -118,14 +120,14 @@ export function ExercisePickerModal({
       >
         <View style={styles.sheetHeader}>
           <Text style={[styles.sheetTitle, { color: colors.onSurface }]}>
-            {groupLabel ? `${groupLabel} hareketleri` : 'Egzersiz kütüphanesi'}
+            {mealLabel ? `${mealLabel} besinleri` : 'Besin kütüphanesi'}
           </Text>
           <Pressable onPress={onClose} hitSlop={8}>
             <MaterialIcons name="close" size={22} color={colors.onSurfaceVariant} />
           </Pressable>
         </View>
 
-        {muscleGroup ? (
+        {mealType ? (
           <View style={styles.scopeRow}>
             <Pressable
               onPress={() => setShowAll(false)}
@@ -144,7 +146,7 @@ export function ExercisePickerModal({
                   fontSize: 12,
                 }}
               >
-                Bu grup
+                Bu öğün
               </Text>
             </Pressable>
             <Pressable
@@ -174,7 +176,7 @@ export function ExercisePickerModal({
             styles.search,
             {
               backgroundColor: colors.surfaceContainerLowest,
-              borderColor: colors.electricBlue,
+              borderColor: colors.neonGreen,
             },
           ]}
         >
@@ -182,7 +184,7 @@ export function ExercisePickerModal({
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Egzersiz ara…"
+            placeholder="Besin ara…"
             placeholderTextColor={colors.outline}
             style={[styles.searchInput, { color: colors.onSurface }]}
           />
@@ -195,9 +197,9 @@ export function ExercisePickerModal({
         >
           {filtered.length === 0 ? (
             <Text style={[styles.empty, { color: colors.onSurfaceVariant }]}>
-              {groupLabel && !showAll
-                ? `Bu grup için hareket yok. Tümü ile tüm kütüphaneye bakabilirsin.`
-                : 'Aktif egzersiz bulunamadı.'}
+              {mealLabel && !showAll
+                ? `Bu öğün için besin yok. Tümü ile tüm kütüphaneye bakabilirsin.`
+                : 'Aktif besin bulunamadı.'}
             </Text>
           ) : (
             filtered.map((item) => {
@@ -206,7 +208,7 @@ export function ExercisePickerModal({
                 <Pressable
                   key={item.id}
                   onPress={() => {
-                    onSelect({ ...item, youtube_url: exerciseVideoUrl(item.youtube_url) });
+                    onSelect(item);
                     setQuery('');
                     onClose();
                   }}
@@ -223,7 +225,8 @@ export function ExercisePickerModal({
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.optionName, { color: colors.onSurface }]}>{item.name}</Text>
                     <Text style={[styles.optionMeta, { color: colors.onSurfaceVariant }]}>
-                      {muscleGroupLabel(item.category)}
+                      {item.category ?? 'Genel'} · {formatMacroNumber(Number(item.kcal_per_100g))}{' '}
+                      kcal / 100g
                     </Text>
                   </View>
                   {isSelected ? (
@@ -240,33 +243,6 @@ export function ExercisePickerModal({
   );
 }
 
-/** Template editor gibi tek satırlı yerler için: tek overlay, parent state yoksa lokal. */
-export function ExercisePicker({
-  exercises,
-  selected,
-  onSelect,
-  loading = false,
-}: {
-  exercises: Exercise[];
-  selected: Exercise | null;
-  onSelect: (exercise: Exercise) => void;
-  loading?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <ExercisePickerButton selected={selected} onPress={() => setOpen(true)} loading={loading} />
-      <ExercisePickerModal
-        visible={open}
-        exercises={exercises}
-        selectedId={selected?.id}
-        onSelect={onSelect}
-        onClose={() => setOpen(false)}
-      />
-    </>
-  );
-}
-
 const styles = StyleSheet.create({
   trigger: {
     minHeight: 56,
@@ -276,10 +252,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+    minWidth: 0,
   },
   triggerText: {
     flex: 1,
     gap: 2,
+    minWidth: 0,
   },
   triggerLabel: {
     fontFamily: 'Inter_600SemiBold',

@@ -1,6 +1,10 @@
+import { encodeCardioParams } from './cardio';
+import { inputQuantityFromGrams, parseGrams } from './macros';
+import { normalizeSetsReps } from './setsReps';
 import type { MealType, Program } from '../types/database';
 import type { StudentPlanDay } from '../services/workouts';
 import { addDaysIso, todayIsoDate } from '../utils/format';
+import { unpackDailyNotes } from './dailyNotes';
 
 export const PROGRAM_LENGTH_DAYS = 14;
 
@@ -24,8 +28,9 @@ export type WorkoutRowForm = {
 };
 
 export type FoodRowForm = {
+  food_id: string;
   food_name: string;
-  amount: string;
+  amount_grams: string;
   note: string;
   training_day_only: boolean;
 };
@@ -64,7 +69,7 @@ export function emptyWorkoutRow(): WorkoutRowForm {
   return {
     exercise_id: '',
     muscle_group: '',
-    reps_scheme: '',
+    reps_scheme: '3*10',
     rest_seconds: '60',
     weight_min: '',
     weight_max: '',
@@ -73,10 +78,24 @@ export function emptyWorkoutRow(): WorkoutRowForm {
   };
 }
 
+export function emptyCardioRow(): WorkoutRowForm {
+  return {
+    exercise_id: '',
+    muscle_group: 'cardio',
+    reps_scheme: '',
+    rest_seconds: '',
+    weight_min: '',
+    weight_max: '',
+    is_cardio: true,
+    cardio_params: encodeCardioParams({ minutes: '20', tempo: 'moderate' }),
+  };
+}
+
 export function emptyFoodRow(): FoodRowForm {
   return {
+    food_id: '',
     food_name: '',
-    amount: '',
+    amount_grams: '',
     note: '',
     training_day_only: false,
   };
@@ -126,18 +145,24 @@ export function assignmentFromServer(
   const base = emptyAssignmentForm(startDate);
   const byDate = new Map(days.map((day) => [day.date, day]));
 
+  const unpacked = unpackDailyNotes(program?.daily_notes, PROGRAM_LENGTH_DAYS);
+
   return {
     title: program?.title ?? base.title,
-    trainer_notes: program?.trainer_notes ?? '',
+    trainer_notes: unpacked.all || program?.trainer_notes || '',
     kcal_target: program?.kcal_target != null ? String(program.kcal_target) : base.kcal_target,
     start_weight: program?.start_weight != null ? String(program.start_weight) : '',
     target_weight: program?.target_weight != null ? String(program.target_weight) : '',
     protein_g: program?.protein_g != null ? String(program.protein_g) : '',
     carb_g: program?.carb_g != null ? String(program.carb_g) : '',
     fat_g: program?.fat_g != null ? String(program.fat_g) : '',
-    days: base.days.map((placeholder) => {
+    days: base.days.map((placeholder, index) => {
       const loaded = byDate.get(placeholder.date);
-      if (!loaded) return placeholder;
+      if (!loaded) {
+        return unpacked.perDay[index]
+          ? { ...placeholder, daily_note: unpacked.perDay[index] }
+          : placeholder;
+      }
 
       const mealsByType = new Map(
         (loaded.daily_diets ?? []).map((meal) => [meal.meal_type, meal]),
@@ -147,7 +172,7 @@ export function assignmentFromServer(
         planId: loaded.id,
         date: loaded.date,
         workout_title: loaded.workout_title ?? '',
-        daily_note: loaded.daily_note ?? '',
+        daily_note: unpacked.perDay[index] || loaded.daily_note || '',
         water_goal: loaded.water_goal != null ? String(loaded.water_goal) : '4000',
         is_rest_day: loaded.is_rest_day,
         is_training_day: loaded.is_training_day,
@@ -157,7 +182,9 @@ export function assignmentFromServer(
                 id: workout.id,
                 exercise_id: workout.exercise_id,
                 muscle_group: workout.muscle_group ?? '',
-                reps_scheme: workout.reps_scheme ?? workout.target_reps ?? '',
+                reps_scheme: workout.is_cardio
+                  ? ''
+                  : normalizeSetsReps(workout.reps_scheme ?? workout.target_reps ?? ''),
                 rest_seconds: workout.rest_seconds != null ? String(workout.rest_seconds) : '60',
                 weight_min: workout.weight_min != null ? String(workout.weight_min) : '',
                 weight_max: workout.weight_max != null ? String(workout.weight_max) : '',
@@ -179,13 +206,28 @@ export function assignmentFromServer(
               foods:
                 meal.diet_foods && meal.diet_foods.length > 0
                   ? meal.diet_foods.map((food) => ({
-                      food_name: food.food_name,
-                      amount: food.amount ?? '',
+                      food_id: food.food_id ?? '',
+                      food_name: food.foods?.name ?? food.food_name,
+                      amount_grams: (() => {
+                        const grams =
+                          food.amount_in_grams != null
+                            ? parseGrams(food.amount_in_grams)
+                            : parseGrams(food.amount);
+                        return inputQuantityFromGrams(grams, food.foods);
+                      })(),
                       note: food.note ?? '',
                       training_day_only: food.training_day_only,
                     }))
                   : meal.content
-                    ? [{ food_name: meal.content, amount: '', note: '', training_day_only: false }]
+                    ? [
+                        {
+                          food_id: '',
+                          food_name: meal.content,
+                          amount_grams: '',
+                          note: '',
+                          training_day_only: false,
+                        },
+                      ]
                     : [emptyFoodRow()],
             };
           });

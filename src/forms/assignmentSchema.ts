@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+import { parseCardioParams } from './cardio';
+import { parseSetsReps } from './setsReps';
+import { MEAL_LABELS, type MealType } from '../types/database';
+
 export const assignmentFormSchema = z.object({
   title: z.string(),
   trainer_notes: z.string(),
@@ -37,8 +41,9 @@ export const assignmentFormSchema = z.object({
           meal_type: z.string(),
           foods: z.array(
             z.object({
+              food_id: z.string(),
               food_name: z.string(),
-              amount: z.string(),
+              amount_grams: z.string(),
               note: z.string(),
               training_day_only: z.boolean(),
             }),
@@ -58,14 +63,28 @@ export function validateAssignment(values: z.infer<typeof assignmentFormSchema>)
   for (const [index, day] of parsed.data.days.entries()) {
     if (day.is_rest_day) continue;
     for (const workout of day.workouts) {
-      if (workout.exercise_id && !workout.reps_scheme.trim()) {
-        return `Gün ${index + 1}: set/tekrar şeması boş olamaz.`;
+      if (workout.is_cardio) {
+        const { minutes } = parseCardioParams(workout.cardio_params);
+        if (!minutes.trim()) {
+          return `Gün ${index + 1}: kardiyo dakikası girin.`;
+        }
+        continue;
+      }
+      if (workout.exercise_id) {
+        const { sets, reps } = parseSetsReps(workout.reps_scheme);
+        if (!sets || !reps) {
+          return `Gün ${index + 1}: set ve tekrar sayısı girin.`;
+        }
       }
     }
     for (const meal of day.meals) {
-      const incomplete = meal.foods.some((food) => !food.food_name.trim() && food.amount.trim());
-      if (incomplete) {
-        return `Gün ${index + 1}: ${meal.meal_type} öğününde miktar var, besin adı yok.`;
+      const missingFood = meal.foods.some((food) => !food.food_id.trim() && food.amount_grams.trim());
+      if (missingFood) {
+        return `Gün ${index + 1}: ${MEAL_LABELS[meal.meal_type as MealType] ?? meal.meal_type} öğününde gramaj var, besin seçilmedi.`;
+      }
+      const missingGrams = meal.foods.some((food) => food.food_id.trim() && !food.amount_grams.trim());
+      if (missingGrams) {
+        return `Gün ${index + 1}: ${MEAL_LABELS[meal.meal_type as MealType] ?? meal.meal_type} öğününde miktar girin.`;
       }
     }
   }

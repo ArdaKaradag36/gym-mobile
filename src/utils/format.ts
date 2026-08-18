@@ -27,13 +27,48 @@ export function daysBetweenIso(fromDate: string, toDate: string): number {
   return Math.round((to - from) / 86_400_000);
 }
 
-export function formatShortDate(isoDate: string) {
+const WEEKDAYS_SHORT = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'] as const;
+const MONTHS_SHORT = [
+  'Oca',
+  'Şub',
+  'Mar',
+  'Nis',
+  'May',
+  'Haz',
+  'Tem',
+  'Ağu',
+  'Eyl',
+  'Eki',
+  'Kas',
+  'Ara',
+] as const;
+
+function pad2(value: number) {
+  return String(value).padStart(2, '0');
+}
+
+function parseIsoDateParts(isoDate: string) {
   const [year, month, day] = isoDate.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
+  if (!year || !month || !day) return null;
+  return { year, month, day, date: new Date(year, month - 1, day) };
+}
+
+export function formatShortDate(isoDate: string) {
+  const parts = parseIsoDateParts(isoDate);
+  if (!parts) return isoDate;
+  return `${WEEKDAYS_SHORT[parts.date.getDay()]} ${parts.day} ${MONTHS_SHORT[parts.month - 1]}`;
+}
+
+export function formatWeekdayDay(isoDate: string) {
+  const parts = parseIsoDateParts(isoDate);
+  if (!parts) return isoDate;
+  return `${WEEKDAYS_SHORT[parts.date.getDay()]} ${parts.day}`;
+}
+
+export function formatNumericDate(isoDate: string) {
+  const parts = parseIsoDateParts(isoDate);
+  if (!parts) return isoDate;
+  return `${pad2(parts.day)}.${pad2(parts.month)}.${parts.year}`;
 }
 
 export function initialsFromName(name: string) {
@@ -43,6 +78,12 @@ export function initialsFromName(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
+}
+
+export function formatNoteTime(iso: string) {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return '';
+  return `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 }
 
 export function parseOptionalNumber(value: string | number | null | undefined): number | null {

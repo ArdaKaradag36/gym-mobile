@@ -10,6 +10,25 @@ export type MealType =
   | 'dinner'
   | 'lunch';
 
+export type FoodUnitLabel = 'adet' | 'ölçek' | 'dilim' | 'kaşık';
+
+export type DailyNotesJson = {
+  m?: string[];
+  a?: number;
+  d?: Record<string, number>;
+  all?: string;
+  days?: Record<string, string>;
+};
+
+export interface StudentNote {
+  id: string;
+  student_id: string;
+  trainer_id: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+}
+
 export type MuscleGroup =
   | 'chest'
   | 'back'
@@ -39,6 +58,20 @@ export interface Exercise {
   is_cardio: boolean;
 }
 
+export interface Food {
+  id: string;
+  name: string;
+  category: string | null;
+  kcal_per_100g: number;
+  protein_per_100g: number;
+  carb_per_100g: number;
+  fat_per_100g: number;
+  is_active: boolean;
+  meal_types: MealType[];
+  unit_label: FoodUnitLabel | null;
+  grams_per_unit: number | null;
+}
+
 export interface Program {
   id: string;
   student_id: string;
@@ -57,6 +90,7 @@ export interface Program {
   carb_g_off: number | null;
   fat_g_off: number | null;
   trainer_notes: string | null;
+  daily_notes?: DailyNotesJson | null;
 }
 
 export interface DailyPlan {
@@ -75,11 +109,25 @@ export interface DailyPlan {
 export interface DietFood {
   id: string;
   daily_diet_id: string;
+  food_id: string | null;
   food_name: string;
   amount: string | null;
+  amount_in_grams: number | null;
   note: string | null;
   training_day_only: boolean;
   order_index: number;
+  foods?: Pick<
+    Food,
+    | 'id'
+    | 'name'
+    | 'category'
+    | 'kcal_per_100g'
+    | 'protein_per_100g'
+    | 'carb_per_100g'
+    | 'fat_per_100g'
+    | 'unit_label'
+    | 'grams_per_unit'
+  > | null;
 }
 
 export interface DailyDiet {
@@ -189,11 +237,25 @@ export interface DietTemplateMeal {
 export interface DietTemplateFood {
   id: string;
   meal_id: string;
+  food_id: string | null;
   food_name: string;
   amount: string | null;
+  amount_in_grams: number | null;
   note: string | null;
   training_day_only: boolean;
   order_index: number;
+  foods?: Pick<
+    Food,
+    | 'id'
+    | 'name'
+    | 'category'
+    | 'kcal_per_100g'
+    | 'protein_per_100g'
+    | 'carb_per_100g'
+    | 'fat_per_100g'
+    | 'unit_label'
+    | 'grams_per_unit'
+  > | null;
 }
 
 export const MEAL_LABELS: Record<MealType, string> = {
@@ -207,10 +269,37 @@ export const MEAL_LABELS: Record<MealType, string> = {
 
 export const MEAL_SORT_ORDER: MealType[] = [
   'breakfast',
+  'pre_workout',
+  'post_workout',
   'lunch',
   'dinner',
   'snack',
-  'pre_workout',
-  'post_workout',
 ];
+
+export const FOOD_UNIT_LABELS: Record<FoodUnitLabel, string> = {
+  adet: 'Adet',
+  ölçek: 'Ölçek',
+  dilim: 'Dilim',
+  kaşık: 'Kaşık',
+};
+
+export const MEAL_CHIP_LABELS: Record<MealType, string> = {
+  breakfast: 'Sabah',
+  lunch: 'Öğle',
+  dinner: 'Akşam',
+  snack: 'Ara',
+  pre_workout: 'Önce',
+  post_workout: 'Sonra',
+};
+
+export function foodFitsMeal(food: Pick<Food, 'meal_types'>, mealType?: MealType | null): boolean {
+  if (!mealType) return true;
+  const types = food.meal_types;
+  if (!types?.length) return true;
+  return types.includes(mealType);
+}
+
+export function foodsForMeal(foods: Food[], mealType?: MealType | null): Food[] {
+  return foods.filter((food) => foodFitsMeal(food, mealType));
+}
 

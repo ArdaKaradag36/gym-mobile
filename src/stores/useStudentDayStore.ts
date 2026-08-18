@@ -21,7 +21,7 @@ type StudentDayState = {
   loading: boolean;
   error: string | null;
   updatingId: string | null;
-  load: (studentId: string) => Promise<void>;
+  load: (studentId: string, opts?: { silent?: boolean }) => Promise<void>;
   toggleWorkout: (workout: WorkoutWithExercise, planId: string) => Promise<void>;
   saveWeight: (workoutId: string, planId: string, weightText: string) => Promise<void>;
   toggleMeal: (dietId: string, planId: string, next: boolean) => Promise<void>;
@@ -46,8 +46,9 @@ export const useStudentDayStore = create<StudentDayState>((set, get) => ({
   error: null,
   updatingId: null,
 
-  load: async (studentId) => {
-    set({ loading: true, error: null });
+  load: async (studentId, opts) => {
+    if (!opts?.silent) set({ loading: true, error: null });
+    else set({ error: null });
     try {
       const [bundle, todayPlan] = await Promise.all([
         fetchStudentProgramDays(studentId, { status: 'active' }),
@@ -72,6 +73,8 @@ export const useStudentDayStore = create<StudentDayState>((set, get) => ({
 
   toggleWorkout: async (workout, planId) => {
     const next = !workout.is_completed;
+    const previousDays = get().days;
+    const previousToday = get().today;
     set({ updatingId: workout.id });
 
     const mapWorkouts = (day: StudentPlanDay): StudentPlanDay => ({
@@ -91,7 +94,11 @@ export const useStudentDayStore = create<StudentDayState>((set, get) => ({
     try {
       await updateWorkoutCompletion(workout.id, next);
     } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Egzersiz güncellenemedi' });
+      set({
+        days: previousDays,
+        today: previousToday,
+        error: err instanceof Error ? err.message : 'Egzersiz güncellenemedi',
+      });
     } finally {
       set({ updatingId: null });
     }
@@ -113,17 +120,30 @@ export const useStudentDayStore = create<StudentDayState>((set, get) => ({
   },
 
   toggleMeal: async (dietId, planId, next) => {
+    const previousDays = get().days;
+    const previousToday = get().today;
+    set({ updatingId: dietId });
     const mapMeals = (day: StudentPlanDay): StudentPlanDay => ({
       ...day,
-      daily_diets: [...day.daily_diets]
-        .map((item) => (item.id === dietId ? { ...item, is_completed: next } : item))
-        .sort((a, b) => Number(a.is_completed) - Number(b.is_completed)),
+      daily_diets: day.daily_diets.map((item) =>
+        item.id === dietId ? { ...item, is_completed: next } : item,
+      ),
     });
     set((state) => ({
       days: patchDay(state.days, planId, mapMeals),
       today: state.today?.id === planId ? mapMeals(state.today) : state.today,
     }));
-    await updateDietCompletion(dietId, next);
+    try {
+      await updateDietCompletion(dietId, next);
+    } catch (err) {
+      set({
+        days: previousDays,
+        today: previousToday,
+        error: err instanceof Error ? err.message : 'Öğün güncellenemedi',
+      });
+    } finally {
+      set({ updatingId: null });
+    }
   },
 
   adjustWater: async (delta) => {

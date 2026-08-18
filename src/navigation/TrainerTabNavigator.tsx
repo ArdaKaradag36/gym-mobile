@@ -1,12 +1,14 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Alert, StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ConfirmSheet } from '../components/ConfirmSheet';
 import { useTrainerStore } from '../stores/useTrainerStore';
-import { spacing } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { withAlpha } from '../utils/format';
+import { tabBarDockStyle } from '../utils/layout';
 import { TrainerLibraryStack } from './TrainerLibraryStack';
 import { TrainerStudentsStack } from './TrainerStudentsStack';
 
@@ -20,30 +22,24 @@ const Tab = createBottomTabNavigator<TrainerTabParamList>();
 export function TrainerTabNavigator() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const [pendingTab, setPendingTab] = useState<keyof TrainerTabParamList | null>(null);
+  const tabNavRef = useRef<{ navigate: (name: keyof TrainerTabParamList) => void } | null>(null);
 
   return (
+    <View style={{ flex: 1 }}>
     <Tab.Navigator
       initialRouteName="Students"
+      safeAreaInsets={{ bottom: 0 }}
       screenListeners={({ navigation, route }) => ({
         tabPress: (event) => {
+          tabNavRef.current = navigation;
           const state = navigation.getState();
           const current = state.routes[state.index]?.name;
           if (current === route.name) return;
           if (!useTrainerStore.getState().unsavedLock) return;
 
           event.preventDefault();
-          Alert.alert(
-            'Kaydedilmemiş değişiklikler',
-            'Kaydedilmemiş değişiklikler var, çıkmak istediğinize emin misiniz?',
-            [
-              { text: 'Vazgeç', style: 'cancel' },
-              {
-                text: 'Çık',
-                style: 'destructive',
-                onPress: () => navigation.navigate(route.name),
-              },
-            ],
-          );
+          setPendingTab(route.name);
         },
       })}
       screenOptions={({ route }) => ({
@@ -51,13 +47,10 @@ export function TrainerTabNavigator() {
         tabBarActiveTintColor: colors.neonGreenDim,
         tabBarInactiveTintColor: colors.tabInactive,
         tabBarStyle: {
-          position: 'absolute',
           backgroundColor: withAlpha(colors.surfaceContainerLowest, 0.92),
           borderTopColor: withAlpha(colors.outlineVariant, 0.35),
           borderTopWidth: StyleSheet.hairlineWidth,
-          height: 64 + Math.max(insets.bottom, spacing.stackSm),
-          paddingTop: spacing.stackSm,
-          paddingBottom: Math.max(insets.bottom, spacing.stackSm),
+          ...tabBarDockStyle(insets.bottom),
         },
         tabBarLabelStyle: {
           fontFamily: 'Inter_600SemiBold',
@@ -89,6 +82,18 @@ export function TrainerTabNavigator() {
         options={{ title: 'Kütüphane' }}
       />
     </Tab.Navigator>
+    <ConfirmSheet
+      visible={pendingTab != null}
+      message="Kaydedilmemiş değişiklikler var, çıkmak istediğinize emin misiniz?"
+      onCancel={() => setPendingTab(null)}
+      onConfirm={() => {
+        const target = pendingTab;
+        setPendingTab(null);
+        useTrainerStore.getState().discardUnsaved();
+        if (target) tabNavRef.current?.navigate(target);
+      }}
+    />
+    </View>
   );
 }
 

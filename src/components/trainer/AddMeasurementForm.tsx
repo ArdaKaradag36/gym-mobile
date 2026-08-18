@@ -12,6 +12,7 @@ import {
 import type { Measurement } from '../../types/database';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
+import { formatNumericDate } from '../../utils/format';
 
 type AddMeasurementFormProps = {
   date: string;
@@ -39,11 +40,11 @@ export function AddMeasurementForm({
     const parsedBodyFat = bodyFat.trim() === '' ? null : Number(bodyFat);
 
     if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
-      setFormError('Enter a valid weight.');
+      setFormError('Geçerli bir kilo gir.');
       return;
     }
     if (parsedBodyFat != null && (!Number.isFinite(parsedBodyFat) || parsedBodyFat < 0)) {
-      setFormError('Enter a valid body fat % or leave blank.');
+      setFormError('Geçerli bir yağ oranı gir veya boş bırak.');
       return;
     }
 
@@ -67,9 +68,9 @@ export function AddMeasurementForm({
           },
         ]}
       >
-        <Text style={[styles.title, { color: colors.onSurface }]}>New Measurement</Text>
+        <Text style={[styles.title, { color: colors.onSurface }]}>Yeni ölçüm</Text>
 
-        <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Date</Text>
+        <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Tarih</Text>
         <TextInput
           value={date}
           onChangeText={onDateChange}
@@ -88,7 +89,7 @@ export function AddMeasurementForm({
 
         <View style={styles.row}>
           <View style={styles.half}>
-            <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Weight (kg)</Text>
+            <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Kilo (kg)</Text>
             <TextInput
               value={weight}
               onChangeText={setWeight}
@@ -107,7 +108,7 @@ export function AddMeasurementForm({
           </View>
           <View style={styles.half}>
             <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>
-              Body fat %
+              Yağ oranı %
             </Text>
             <TextInput
               value={bodyFat}
@@ -149,17 +150,17 @@ export function AddMeasurementForm({
           ) : (
             <>
               <MaterialIcons name="monitor-weight" size={18} color={colors.onPrimary} />
-              <Text style={[styles.saveText, { color: colors.onPrimary }]}>Save</Text>
+              <Text style={[styles.saveText, { color: colors.onPrimary }]}>Kaydet</Text>
             </>
           )}
         </Pressable>
       </View>
 
       <View style={styles.recentBlock}>
-        <Text style={[styles.recentTitle, { color: colors.onSurface }]}>Recent</Text>
+        <Text style={[styles.recentTitle, { color: colors.onSurface }]}>Son ölçümler</Text>
         {recent.length === 0 ? (
           <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular' }}>
-            No measurements yet.
+            Henüz ölçüm yok.
           </Text>
         ) : (
           recent.map((item) => (
@@ -174,7 +175,7 @@ export function AddMeasurementForm({
               ]}
             >
               <Text style={{ color: colors.onSurface, fontFamily: 'Inter_600SemiBold' }}>
-                {item.date}
+                {formatNumericDate(item.date)}
               </Text>
               <Text style={{ color: colors.electricBlueSoft, fontFamily: 'Inter_400Regular' }}>
                 {item.weight ?? '--'} kg

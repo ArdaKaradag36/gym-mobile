@@ -45,7 +45,7 @@ export function RootNavigator() {
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <Text style={[styles.title, { color: colors.neonGreen }]}>FORGE</Text>
         <Text style={[styles.copy, { color: colors.error }]}>
-          {error ?? 'Supabase is not configured.'}
+          {error ?? 'Supabase ayarlı değil.'}
         </Text>
       </View>
     );
@@ -71,10 +71,10 @@ export function RootNavigator() {
     <View style={[styles.center, { backgroundColor: colors.background }]}>
       <ActivityIndicator size="large" color={colors.neonGreen} />
       <Text style={[styles.copy, { color: colors.onSurfaceVariant }]}>
-        {error ?? 'Loading your workspace…'}
+          {error ?? 'Çalışma alanı yükleniyor…'}
       </Text>
       <Text onPress={retry} style={{ color: colors.neonGreen, fontFamily: 'Inter_600SemiBold' }}>
-        Retry
+        Tekrar dene
       </Text>
     </View>
   );

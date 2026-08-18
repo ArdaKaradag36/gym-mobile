@@ -18,7 +18,8 @@ export const PROGRAM_COLUMNS = `
   protein_g_off,
   carb_g_off,
   fat_g_off,
-  trainer_notes
+  trainer_notes,
+  daily_notes
 `;
 
 export const PLAN_EMBED = `
@@ -60,11 +61,14 @@ export const PLAN_EMBED = `
     diet_foods (
       id,
       daily_diet_id,
+      food_id,
       food_name,
       amount,
+      amount_in_grams,
       note,
       training_day_only,
-      order_index
+      order_index,
+      foods ( id, name, category, kcal_per_100g, protein_per_100g, carb_per_100g, fat_per_100g, unit_label, grams_per_unit )
     )
   )
 `;

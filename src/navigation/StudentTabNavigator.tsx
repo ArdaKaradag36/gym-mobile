@@ -6,8 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StudentProfileProvider } from '../components/student/StudentProfileProvider';
 import { HomeScreen } from '../screens/student/HomeScreen';
 import { MeasurementsScreen } from '../screens/student/MeasurementsScreen';
-import { radii, spacing } from '../theme/colors';
+import { radii } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
+import { tabBarDockStyle } from '../utils/layout';
 import { StudentDietStack } from './StudentDietStack';
 import { StudentWorkoutsStack } from './StudentWorkoutsStack';
 
@@ -35,21 +36,19 @@ export function StudentTabNavigator() {
     <StudentProfileProvider>
       <Tab.Navigator
         initialRouteName="Home"
+        safeAreaInsets={{ bottom: 0 }}
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarShowLabel: true,
           tabBarActiveTintColor: colors.neonGreen,
           tabBarInactiveTintColor: colors.tabInactive,
           tabBarStyle: {
-            position: 'absolute',
             backgroundColor: withAlpha(colors.surfaceContainerLowest, 0.92),
             borderTopColor: withAlpha(colors.outlineVariant, 0.35),
             borderTopWidth: StyleSheet.hairlineWidth,
             borderTopLeftRadius: radii.xl,
             borderTopRightRadius: radii.xl,
-            height: 64 + Math.max(insets.bottom, spacing.stackSm),
-            paddingTop: spacing.stackSm,
-            paddingBottom: Math.max(insets.bottom, spacing.stackSm),
+            ...tabBarDockStyle(insets.bottom),
           },
           tabBarLabelStyle: {
             fontFamily: 'Inter_600SemiBold',

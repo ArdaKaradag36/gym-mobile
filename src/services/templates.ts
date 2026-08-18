@@ -9,7 +9,10 @@ import type {
 import type { DietTemplateForm, WorkoutTemplateForm } from '../forms/templateForm';
 import type { WorkoutRowForm } from '../forms/studentDayAssignment';
 import { isSupabaseConfigured, supabase } from './supabaseClient';
+import { amountDisplayForSave, gramsFromQuantity, inputQuantityFromGrams, parseGrams } from '../forms/macros';
+import { fetchFoodUnitMap } from './trainer';
 import { parseOptionalNumber } from '../utils/format';
+import { normalizeSetsReps } from '../forms/setsReps';
 
 const WORKOUT_TEMPLATE_EMBED = `
   id,
@@ -46,11 +49,14 @@ const DIET_TEMPLATE_EMBED = `
     diet_template_foods (
       id,
       meal_id,
+      food_id,
       food_name,
       amount,
+      amount_in_grams,
       note,
       training_day_only,
-      order_index
+      order_index,
+      foods ( id, name, category, kcal_per_100g, protein_per_100g, carb_per_100g, fat_per_100g, unit_label, grams_per_unit )
     )
   )
 `;
@@ -78,7 +84,16 @@ export async function fetchDietTemplates(trainerId: string): Promise<DietTemplat
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return (data ?? []) as DietTemplate[];
+  return ((data ?? []) as unknown as DietTemplate[]).map((template) => ({
+    ...template,
+    diet_template_meals: (template.diet_template_meals ?? []).map((meal) => ({
+      ...meal,
+      diet_template_foods: (meal.diet_template_foods ?? []).map((food) => ({
+        ...food,
+        foods: Array.isArray(food.foods) ? (food.foods[0] ?? null) : (food.foods ?? null),
+      })),
+    })),
+  }));
 }
 
 export async function saveWorkoutTemplate(
@@ -115,18 +130,18 @@ export async function saveWorkoutTemplate(
   }
 
   const items = form.items
-    .filter((item) => item.exercise_id.trim())
+    .filter((item) => item.is_cardio || item.exercise_id.trim())
     .map((item, index) => ({
       template_id: saved.id,
-      exercise_id: item.exercise_id,
+      exercise_id: item.exercise_id.trim() || null,
       order_index: index + 1,
-      reps_scheme: item.reps_scheme || null,
-      rest_seconds: parseOptionalNumber(item.rest_seconds),
-      weight_min: parseOptionalNumber(item.weight_min),
-      weight_max: parseOptionalNumber(item.weight_max),
+      reps_scheme: item.is_cardio ? null : normalizeSetsReps(item.reps_scheme) || null,
+      rest_seconds: item.is_cardio ? null : parseOptionalNumber(item.rest_seconds),
+      weight_min: item.is_cardio ? null : parseOptionalNumber(item.weight_min),
+      weight_max: item.is_cardio ? null : parseOptionalNumber(item.weight_max),
       is_cardio: item.is_cardio,
-      cardio_params: item.cardio_params || null,
-      muscle_group: item.muscle_group || null,
+      cardio_params: item.is_cardio ? item.cardio_params || null : null,
+      muscle_group: item.is_cardio ? 'cardio' : item.muscle_group || null,
     }));
 
   if (items.length > 0) {
@@ -168,8 +183,12 @@ export async function saveDietTemplate(
     saved = data as DietTemplate;
   }
 
+  const foodUnits = await fetchFoodUnitMap(
+    form.meals.flatMap((meal) => meal.foods.map((food) => food.food_id)),
+  );
+
   for (const [index, meal] of form.meals.entries()) {
-    const foods = meal.foods.filter((food) => food.food_name.trim());
+    const foods = meal.foods.filter((food) => food.food_id.trim());
     if (foods.length === 0) continue;
 
     const { data: mealRow, error: mealError } = await supabase
@@ -185,14 +204,21 @@ export async function saveDietTemplate(
     if (mealError) throw mealError;
 
     const { error: foodError } = await supabase.from('diet_template_foods').insert(
-      foods.map((food, foodIndex) => ({
-        meal_id: mealRow.id,
-        food_name: food.food_name.trim(),
-        amount: food.amount.trim() || null,
-        note: food.note.trim() || null,
-        training_day_only: food.training_day_only,
-        order_index: foodIndex,
-      })),
+      foods.map((food, foodIndex) => {
+        const qty = parseGrams(food.amount_grams);
+        const unit = foodUnits.get(food.food_id);
+        const grams = gramsFromQuantity(qty, unit);
+        return {
+          meal_id: mealRow.id,
+          food_id: food.food_id.trim() || null,
+          food_name: food.food_name.trim() || 'Besin',
+          amount: amountDisplayForSave(qty, unit),
+          amount_in_grams: grams > 0 ? grams : null,
+          note: food.note.trim() || null,
+          training_day_only: food.training_day_only,
+          order_index: foodIndex,
+        };
+      }),
     );
     if (foodError) throw foodError;
   }
@@ -221,7 +247,7 @@ export function templateItemsToWorkoutRows(
       id: undefined,
       exercise_id: item.exercise_id ?? '',
       muscle_group: item.muscle_group ?? '',
-      reps_scheme: item.reps_scheme ?? '',
+      reps_scheme: item.is_cardio ? '' : normalizeSetsReps(item.reps_scheme),
       rest_seconds: item.rest_seconds != null ? String(item.rest_seconds) : '60',
       weight_min: item.weight_min != null ? String(item.weight_min) : '',
       weight_max: item.weight_max != null ? String(item.weight_max) : '',
@@ -233,8 +259,9 @@ export function templateItemsToWorkoutRows(
 export function dietTemplateToMeals(template: DietTemplate): Array<{
   meal_type: MealType;
   foods: Array<{
+    food_id: string;
     food_name: string;
-    amount: string;
+    amount_grams: string;
     note: string;
     training_day_only: boolean;
   }>;
@@ -247,11 +274,16 @@ export function dietTemplateToMeals(template: DietTemplate): Array<{
       foods: (meal.diet_template_foods ?? [])
         .slice()
         .sort((a: DietTemplateFood, b: DietTemplateFood) => a.order_index - b.order_index)
-        .map((food) => ({
-          food_name: food.food_name,
-          amount: food.amount ?? '',
-          note: food.note ?? '',
-          training_day_only: food.training_day_only,
-        })),
+        .map((food) => {
+          const grams =
+            food.amount_in_grams != null ? parseGrams(food.amount_in_grams) : parseGrams(food.amount);
+          return {
+            food_id: food.food_id ?? '',
+            food_name: food.foods?.name ?? food.food_name,
+            amount_grams: inputQuantityFromGrams(grams, food.foods),
+            note: food.note ?? '',
+            training_day_only: food.training_day_only,
+          };
+        }),
     }));
 }

@@ -12,7 +12,6 @@ export const MUSCLE_GROUPS = [
   { key: 'shoulders', label: 'Omuz' },
   { key: 'arms', label: 'Kol' },
   { key: 'core', label: 'Karın' },
-  { key: 'cardio', label: 'Kardiyo' },
   { key: 'push', label: 'İtme' },
   { key: 'pull', label: 'Çekme' },
 ] as const;
@@ -21,6 +20,33 @@ export type MuscleGroupKey = (typeof MUSCLE_GROUPS)[number]['key'];
 
 export function muscleGroupLabel(key?: string | null) {
   if (!key) return 'Diğer';
+  if (key.toLowerCase() === 'cardio') return 'Kardiyo';
   const found = MUSCLE_GROUPS.find((item) => item.key === key.toLowerCase());
   return found?.label ?? key;
+}
+
+const MUSCLE_GROUP_FILTERS: Record<string, string[]> = {
+  chest: ['chest'],
+  back: ['back'],
+  legs: ['legs'],
+  shoulders: ['shoulders'],
+  arms: ['arms'],
+  core: ['core'],
+  push: ['chest', 'shoulders', 'arms', 'push'],
+  pull: ['back', 'arms', 'pull'],
+  cardio: ['cardio'],
+};
+
+export function exercisesForMuscleGroup<T extends { category?: string | null; is_cardio?: boolean }>(
+  exercises: T[],
+  muscleGroup?: string | null,
+): T[] {
+  if (!muscleGroup?.trim()) return exercises;
+  const key = muscleGroup.toLowerCase();
+  const categories = MUSCLE_GROUP_FILTERS[key] ?? [key];
+  return exercises.filter((item) => {
+    if (item.is_cardio) return categories.includes('cardio');
+    const category = item.category?.toLowerCase();
+    return category ? categories.includes(category) : false;
+  });
 }

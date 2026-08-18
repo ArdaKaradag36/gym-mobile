@@ -32,7 +32,7 @@ export function useStudentDetail(studentId: string) {
       setPlan(planData);
       setMeasurements(measurementData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load student detail');
+      setError(err instanceof Error ? err.message : 'Öğrenci detayı yüklenemedi');
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export function useStudentDetail(studentId: string) {
         });
         await refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to assign workout');
+        setError(err instanceof Error ? err.message : 'Antrenman atanamadı');
         throw err;
       } finally {
         setSaving(false);
@@ -80,7 +80,7 @@ export function useStudentDetail(studentId: string) {
         });
         await refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to assign diet');
+        setError(err instanceof Error ? err.message : 'Diyet atanamadı');
         throw err;
       } finally {
         setSaving(false);
@@ -101,7 +101,7 @@ export function useStudentDetail(studentId: string) {
         });
         await refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to save measurement');
+        setError(err instanceof Error ? err.message : 'Ölçüm kaydedilemedi');
         throw err;
       } finally {
         setSaving(false);

@@ -1,13 +1,18 @@
 import type { ReactNode } from 'react';
-import { Controller, useFieldArray, type Control } from 'react-hook-form';
+import { Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { MuscleGroupPicker } from './MuscleGroupPicker';
+import { CardioFields } from './CardioFields';
 import { ExercisePickerButton } from './ExercisePicker';
+import { FoodAmountFields } from './FoodAmountFields';
+import { SetsRepsFields } from './SetsRepsFields';
+import { MacroTotals } from '../MacroTotals';
 import type { AssignmentForm } from '../../forms/studentDayAssignment';
-import { emptyFoodRow, emptyWorkoutRow } from '../../forms/studentDayAssignment';
+import { emptyCardioRow, emptyFoodRow, emptyWorkoutRow } from '../../forms/studentDayAssignment';
+import { formatMacroLine, macrosForFood, sumFoodMacros, sumMealFoodMacros } from '../../forms/macros';
 import { MEAL_LABELS } from '../../types/database';
-import type { Exercise } from '../../types/database';
+import type { Exercise, Food } from '../../types/database';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 
@@ -17,11 +22,21 @@ type Props = {
   control: Control<AssignmentForm>;
   dayIndex: number;
   exercises: Exercise[];
+  foods?: Food[];
   mode: Mode;
   onPickExercise?: (workoutIndex: number) => void;
+  onPickFood?: (mealIndex: number, foodIndex: number) => void;
 };
 
-export function InlineDayEditor({ control, dayIndex, exercises, mode, onPickExercise }: Props) {
+export function InlineDayEditor({
+  control,
+  dayIndex,
+  exercises,
+  foods = [],
+  mode,
+  onPickExercise,
+  onPickFood,
+}: Props) {
   const { colors } = useTheme();
 
   return (
@@ -36,7 +51,7 @@ export function InlineDayEditor({ control, dayIndex, exercises, mode, onPickExer
                 <TextInput
                   value={field.value}
                   onChangeText={field.onChange}
-                  placeholder="PUSH / PULL / LEGS"
+                  placeholder="İtme / Çekme / Bacak"
                   placeholderTextColor={colors.outline}
                   style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
                 />
@@ -83,7 +98,7 @@ export function InlineDayEditor({ control, dayIndex, exercises, mode, onPickExer
         </Field>
       )}
 
-      <Field label="Günlük not">
+      <Field label="Bu güne özel not">
         <Controller
           control={control}
           name={`days.${dayIndex}.daily_note`}
@@ -91,9 +106,10 @@ export function InlineDayEditor({ control, dayIndex, exercises, mode, onPickExer
             <TextInput
               value={field.value}
               onChangeText={field.onChange}
-              placeholder="Bugüne özel mesaj"
+              placeholder="Bu güne özel (boşsa genel mesaj gider)"
               placeholderTextColor={colors.outline}
               multiline
+              maxLength={400}
               style={[styles.input, styles.multiline, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
             />
           )}
@@ -108,7 +124,7 @@ export function InlineDayEditor({ control, dayIndex, exercises, mode, onPickExer
           onPickExercise={onPickExercise}
         />
       ) : (
-        <DietRows control={control} dayIndex={dayIndex} />
+        <DietRows control={control} dayIndex={dayIndex} foods={foods} onPickFood={onPickFood} />
       )}
     </View>
   );
@@ -131,7 +147,9 @@ function WorkoutRows({
   return (
     <>
       <Text style={[styles.section, { color: colors.neonGreen }]}>Egzersizler</Text>
-      {workouts.fields.map((row, index) => (
+      {workouts.fields.map((row, index) => {
+        const isCardio = Boolean(row.is_cardio);
+        return (
         <View
           key={row.id}
           style={[
@@ -143,6 +161,14 @@ function WorkoutRows({
             },
           ]}
         >
+          {isCardio ? (
+            <Controller
+              control={control}
+              name={`days.${dayIndex}.workouts.${index}.cardio_params`}
+              render={({ field }) => <CardioFields value={field.value} onChange={field.onChange} />}
+            />
+          ) : (
+            <>
           <Controller
             control={control}
             name={`days.${dayIndex}.workouts.${index}.exercise_id`}
@@ -156,15 +182,7 @@ function WorkoutRows({
           <Controller
             control={control}
             name={`days.${dayIndex}.workouts.${index}.reps_scheme`}
-            render={({ field }) => (
-              <TextInput
-                value={field.value}
-                onChangeText={field.onChange}
-                placeholder="Set/tekrar: 4*12/8/6/6"
-                placeholderTextColor={colors.outline}
-                style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
-              />
-            )}
+            render={({ field }) => <SetsRepsFields value={field.value} onChange={field.onChange} />}
           />
           <Controller
             control={control}
@@ -178,66 +196,71 @@ function WorkoutRows({
               control={control}
               name={`days.${dayIndex}.workouts.${index}.weight_min`}
               render={({ field }) => (
-                <TextInput
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  placeholder="Min kg"
-                  placeholderTextColor={colors.outline}
-                  style={[styles.input, { flex: 1, color: colors.onSurface, borderColor: colors.outlineVariant }]}
-                />
+                <View style={styles.weightField}>
+                  <TextInput
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder="Min kg"
+                    placeholderTextColor={colors.outline}
+                    style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
+                  />
+                </View>
               )}
             />
             <Controller
               control={control}
               name={`days.${dayIndex}.workouts.${index}.weight_max`}
               render={({ field }) => (
-                <TextInput
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  placeholder="Max kg"
-                  placeholderTextColor={colors.outline}
-                  style={[styles.input, { flex: 1, color: colors.onSurface, borderColor: colors.outlineVariant }]}
-                />
+                <View style={styles.weightField}>
+                  <TextInput
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder="Max kg"
+                    placeholderTextColor={colors.outline}
+                    style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
+                  />
+                </View>
               )}
             />
             <Controller
               control={control}
               name={`days.${dayIndex}.workouts.${index}.rest_seconds`}
               render={({ field }) => (
-                <TextInput
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  placeholder="Dinlenme sn"
-                  placeholderTextColor={colors.outline}
-                  keyboardType="number-pad"
-                  style={[styles.input, { width: 90, color: colors.onSurface, borderColor: colors.outlineVariant }]}
-                />
+                <View style={styles.restField}>
+                  <TextInput
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder="Dinlenme sn"
+                    placeholderTextColor={colors.outline}
+                    keyboardType="number-pad"
+                    style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
+                  />
+                </View>
               )}
             />
           </View>
-          <Controller
-            control={control}
-            name={`days.${dayIndex}.workouts.${index}.is_cardio`}
-            render={({ field }) => (
-              <View style={styles.row}>
-                <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular', flex: 1 }}>
-                  Kardiyo (listenin en altında)
-                </Text>
-                <Switch value={field.value} onValueChange={field.onChange} thumbColor={colors.neonGreen} />
-              </View>
-            )}
-          />
+            </>
+          )}
           <Pressable onPress={() => workouts.remove(index)}>
             <Text style={{ color: colors.error, fontFamily: 'Inter_600SemiBold' }}>Satırı sil</Text>
           </Pressable>
         </View>
-      ))}
+        );
+      })}
+      <View style={styles.row}>
       <Pressable
         onPress={() => workouts.append(emptyWorkoutRow())}
-        style={[styles.addBtn, { borderColor: colors.neonGreenBorder }]}
+        style={[styles.addBtn, { borderColor: colors.neonGreenBorder, flex: 1 }]}
       >
         <Text style={{ color: colors.neonGreen, fontFamily: 'Inter_600SemiBold' }}>+ Egzersiz</Text>
       </Pressable>
+      <Pressable
+        onPress={() => workouts.append(emptyCardioRow())}
+        style={[styles.addBtn, { borderColor: colors.electricBlue, flex: 1 }]}
+      >
+        <Text style={{ color: colors.electricBlueSoft, fontFamily: 'Inter_600SemiBold' }}>+ Kardiyo</Text>
+      </Pressable>
+      </View>
     </>
   );
 }
@@ -245,19 +268,33 @@ function WorkoutRows({
 function DietRows({
   control,
   dayIndex,
+  foods,
+  onPickFood,
 }: {
   control: Control<AssignmentForm>;
   dayIndex: number;
+  foods: Food[];
+  onPickFood?: (mealIndex: number, foodIndex: number) => void;
 }) {
   const { colors } = useTheme();
   const meals = useFieldArray({ control, name: `days.${dayIndex}.meals` });
+  const mealValues = useWatch({ control, name: `days.${dayIndex}.meals` });
+  const totals = sumMealFoodMacros(mealValues, foods);
 
   return (
     <>
       <Text style={[styles.section, { color: colors.neonGreen }]}>Öğünler</Text>
       {meals.fields.map((meal, mealIndex) => (
-        <MealEditor key={meal.id} control={control} dayIndex={dayIndex} mealIndex={mealIndex} />
+        <MealEditor
+          key={meal.id}
+          control={control}
+          dayIndex={dayIndex}
+          mealIndex={mealIndex}
+          foods={foods}
+          onPickFood={onPickFood}
+        />
       ))}
+      <MacroTotals macros={totals} />
     </>
   );
 }
@@ -266,16 +303,23 @@ function MealEditor({
   control,
   dayIndex,
   mealIndex,
+  foods,
+  onPickFood,
 }: {
   control: Control<AssignmentForm>;
   dayIndex: number;
   mealIndex: number;
+  foods: Food[];
+  onPickFood?: (mealIndex: number, foodIndex: number) => void;
 }) {
   const { colors } = useTheme();
-  const foods = useFieldArray({
+  const mealFoods = useFieldArray({
     control,
     name: `days.${dayIndex}.meals.${mealIndex}.foods`,
   });
+  const mealFoodValues = useWatch({ control, name: `days.${dayIndex}.meals.${mealIndex}.foods` });
+  const mealTotals = sumFoodMacros(mealFoodValues, foods);
+  const mealLine = formatMacroLine(mealTotals);
 
   return (
     <View style={[styles.card, { borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}>
@@ -283,36 +327,46 @@ function MealEditor({
         control={control}
         name={`days.${dayIndex}.meals.${mealIndex}.meal_type`}
         render={({ field }) => (
-          <Text style={[styles.section, { color: colors.onSurface }]}>
-            {MEAL_LABELS[field.value] ?? field.value}
-          </Text>
+          <View style={{ gap: 2 }}>
+            <Text style={[styles.section, { color: colors.onSurface }]}>
+              {MEAL_LABELS[field.value] ?? field.value}
+            </Text>
+            {mealLine ? (
+              <Text style={{ color: colors.electricBlueSoft, fontFamily: 'Inter_600SemiBold', fontSize: 12 }}>
+                {mealLine}
+              </Text>
+            ) : null}
+          </View>
         )}
       />
-      {foods.fields.map((food, foodIndex) => (
+      {mealFoods.fields.map((food, foodIndex) => (
         <View key={food.id} style={{ gap: 6 }}>
           <Controller
             control={control}
-            name={`days.${dayIndex}.meals.${mealIndex}.foods.${foodIndex}.food_name`}
-            render={({ field }) => (
-              <TextInput
-                value={field.value}
-                onChangeText={field.onChange}
-                placeholder="YUMURTA"
-                placeholderTextColor={colors.outline}
-                style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
-              />
-            )}
-          />
-          <Controller
-            control={control}
-            name={`days.${dayIndex}.meals.${mealIndex}.foods.${foodIndex}.amount`}
-            render={({ field }) => (
-              <TextInput
-                value={field.value}
-                onChangeText={field.onChange}
-                placeholder="75GR / 3 adet"
-                placeholderTextColor={colors.outline}
-                style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
+            name={`days.${dayIndex}.meals.${mealIndex}.foods.${foodIndex}.food_id`}
+            render={({ field: idField }) => (
+              <Controller
+                control={control}
+                name={`days.${dayIndex}.meals.${mealIndex}.foods.${foodIndex}.food_name`}
+                render={({ field: nameField }) => (
+                  <Controller
+                    control={control}
+                    name={`days.${dayIndex}.meals.${mealIndex}.foods.${foodIndex}.amount_grams`}
+                    render={({ field: gramsField }) => (
+                      <FoodAmountFields
+                        selected={foods.find((item) => item.id === idField.value) ?? null}
+                        fallbackName={nameField.value}
+                        grams={gramsField.value}
+                        macros={macrosForFood(
+                          { food_id: idField.value, amount_grams: gramsField.value },
+                          foods,
+                        )}
+                        onPick={() => onPickFood?.(mealIndex, foodIndex)}
+                        onGramsChange={gramsField.onChange}
+                      />
+                    )}
+                  />
+                )}
               />
             )}
           />
@@ -325,7 +379,7 @@ function MealEditor({
                   Sadece antrenman günü
                 </Text>
                 <Switch value={field.value} onValueChange={field.onChange} />
-                <Pressable onPress={() => foods.remove(foodIndex)}>
+                <Pressable onPress={() => mealFoods.remove(foodIndex)}>
                   <Text style={{ color: colors.error }}>Sil</Text>
                 </Pressable>
               </View>
@@ -333,7 +387,7 @@ function MealEditor({
           />
         </View>
       ))}
-      <Pressable onPress={() => foods.append(emptyFoodRow())}>
+      <Pressable onPress={() => mealFoods.append(emptyFoodRow())}>
         <Text style={{ color: colors.electricBlueSoft, fontFamily: 'Inter_600SemiBold' }}>+ Besin</Text>
       </Pressable>
     </View>
@@ -364,20 +418,24 @@ const styles = StyleSheet.create({
   section: { fontFamily: 'Montserrat_700Bold', fontSize: 16 },
   input: {
     minHeight: 44,
+    minWidth: 0,
+    width: '100%',
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingHorizontal: 12,
     fontFamily: 'Inter_400Regular',
-    flexShrink: 1,
   },
   multiline: { minHeight: 72, textAlignVertical: 'top', paddingTop: 10 },
-  row: { flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' },
+  row: { flexDirection: 'row', gap: 8, alignItems: 'center', width: '100%' },
+  weightField: { flex: 1, minWidth: 0 },
+  restField: { width: 90, flexShrink: 0 },
   switchBlock: { alignItems: 'center', gap: 4 },
-  card: { borderWidth: 1, borderRadius: radii.xl, padding: spacing.stackMd, gap: 10 },
+  card: { borderWidth: 1, borderRadius: radii.xl, padding: spacing.stackMd, gap: 10, overflow: 'hidden' },
   addBtn: {
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingVertical: 12,
     alignItems: 'center',
+    flex: 1,
   },
 });

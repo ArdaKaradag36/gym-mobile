@@ -25,7 +25,7 @@ export async function signInWithEmail(
   password: string,
 ): Promise<AuthResult> {
   if (!isSupabaseConfigured) {
-    return { success: false, error: 'Supabase is not configured.' };
+    return { success: false, error: 'Supabase ayarlı değil.' };
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({

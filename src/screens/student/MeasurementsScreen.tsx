@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StudentScreenShell } from '../../components/student/StudentScreenShell';
 import { fetchStudentMeasurements } from '../../services/measurements';
@@ -15,9 +16,12 @@ import type { Measurement } from '../../types/database';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { formatNumericDate } from '../../utils/format';
+import { screenBottomPadding } from '../../utils/layout';
 
 export function MeasurementsScreen() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const studentId = useAuthStore((state) => state.profile?.id);
   const [rows, setRows] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +49,7 @@ export function MeasurementsScreen() {
   return (
     <StudentScreenShell>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: screenBottomPadding(insets) }]}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.neonGreen} />
         }
@@ -72,7 +76,7 @@ export function MeasurementsScreen() {
             ]}
           >
             <Text style={[styles.meta, { color: colors.onSurfaceVariant }]}>
-              {latest.date} · {latest.device ?? 'Manuel'}
+              {formatNumericDate(latest.date)} · {latest.device ?? 'Manuel'}
             </Text>
             <View style={[styles.tableHead, { borderBottomColor: colors.outlineVariant }]}>
               <Text style={[styles.headCell, { color: colors.onSurfaceVariant, flex: 1.4 }]}>
@@ -106,7 +110,9 @@ export function MeasurementsScreen() {
             key={row.id}
             style={[styles.history, { borderColor: colors.outlineVariant }]}
           >
-            <Text style={{ color: colors.onSurface, fontFamily: 'Inter_600SemiBold' }}>{row.date}</Text>
+            <Text style={{ color: colors.onSurface, fontFamily: 'Inter_600SemiBold' }}>
+              {formatNumericDate(row.date)}
+            </Text>
             <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular' }}>
               {row.weight ?? '—'} kg · %{row.body_fat_percent ?? row.body_fat ?? '—'}
             </Text>
@@ -121,7 +127,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.marginPage,
     paddingTop: spacing.stackLg,
-    paddingBottom: 120,
     gap: spacing.stackMd,
   },
   title: {

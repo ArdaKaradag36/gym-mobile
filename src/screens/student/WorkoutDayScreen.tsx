@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo } from 'react';
 import {
@@ -20,7 +21,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useStudentDayStore } from '../../stores/useStudentDayStore';
 import { formatShortDate } from '../../utils/format';
-import { animateListSink } from '../../utils/layoutAnim';
+import { screenBottomPadding } from '../../utils/layout';
 import { groupStudentWorkouts } from '../../utils/workoutSort';
 
 type Props = NativeStackScreenProps<StudentWorkoutsStackParamList, 'WorkoutDay'>;
@@ -36,11 +37,27 @@ export function WorkoutDayScreen({ navigation, route }: Props) {
     if (studentId) void load(studentId);
   }, [load, studentId]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!studentId) return;
+      const hasData = useStudentDayStore.getState().days.length > 0;
+      void load(studentId, { silent: hasData });
+    }, [load, studentId]),
+  );
 
-  const day = days.find((item) => item.id === planId);
+  useEffect(() => {
+    if (days.length === 0) return;
+    const exact = days.find((item) => item.id === planId);
+    if (exact) return;
+    const byDate = days.find((item) => item.date === date);
+    if (byDate) navigation.setParams({ planId: byDate.id });
+  }, [date, days, navigation, planId]);
+
+  const resolvedPlanId =
+    days.find((item) => item.id === planId)?.id ??
+    days.find((item) => item.date === date)?.id ??
+    planId;
+  const day = days.find((item) => item.id === resolvedPlanId);
   const groups = useMemo(
     () => groupStudentWorkouts(day?.daily_workouts ?? []),
     [day],
@@ -75,7 +92,7 @@ export function WorkoutDayScreen({ navigation, route }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: screenBottomPadding(insets) }]}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.neonGreen} />
         }
@@ -100,8 +117,7 @@ export function WorkoutDayScreen({ navigation, route }: Props) {
                   workout={workout}
                   busy={updatingId === workout.id}
                   onToggleComplete={() => {
-                    animateListSink();
-                    void toggleWorkout(workout, planId);
+                    void toggleWorkout(workout, resolvedPlanId);
                   }}
                 />
               ))}
@@ -140,7 +156,6 @@ const styles = StyleSheet.create({
   title: { fontFamily: 'Montserrat_700Bold', fontSize: 20 },
   content: {
     padding: spacing.marginPage,
-    paddingBottom: 120,
     gap: spacing.stackLg,
   },
   group: { gap: spacing.stackSm },

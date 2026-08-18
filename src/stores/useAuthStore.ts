@@ -40,7 +40,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({
           profile: null,
           error:
-            'Signed in, but no profile role was found. Ask an admin to set your role in profiles.',
+            'Giriş yapıldı ama profil rolü bulunamadı. Yöneticiyle iletişime geç.',
         });
         return;
       }
@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err) {
       set({
         profile: null,
-        error: err instanceof Error ? err.message : 'Failed to load profile role.',
+        error: err instanceof Error ? err.message : 'Profil rolü yüklenemedi.',
       });
     }
   },
@@ -58,7 +58,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!isSupabaseConfigured) {
       set({
         booting: false,
-        error: 'Supabase is not configured. Check your .env keys.',
+        error: 'Supabase ayarlı değil. .env anahtarlarını kontrol et.',
       });
       return;
     }

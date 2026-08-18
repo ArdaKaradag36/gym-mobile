@@ -14,10 +14,10 @@ import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 
 const MEAL_OPTIONS: { key: MealType; label: string }[] = [
-  { key: 'breakfast', label: 'Breakfast' },
-  { key: 'lunch', label: 'Lunch' },
-  { key: 'dinner', label: 'Dinner' },
-  { key: 'snack', label: 'Snack' },
+  { key: 'breakfast', label: 'Sabah' },
+  { key: 'lunch', label: 'Öğle' },
+  { key: 'dinner', label: 'Akşam' },
+  { key: 'snack', label: 'Ara öğün' },
 ];
 
 type AssignDietFormProps = {
@@ -43,7 +43,7 @@ export function AssignDietForm({
   const handleSave = async () => {
     setFormError(null);
     if (!content.trim()) {
-      setFormError('Add meal content before saving.');
+      setFormError('Kaydetmeden önce öğün içeriği ekle.');
       return;
     }
 
@@ -65,12 +65,12 @@ export function AssignDietForm({
         },
       ]}
     >
-      <Text style={[styles.title, { color: colors.onSurface }]}>Add Meal</Text>
+      <Text style={[styles.title, { color: colors.onSurface }]}>Öğün ekle</Text>
       <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
-        Plan nutrition for {studentName}.
+        {studentName} için beslenme planı.
       </Text>
 
-      <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Date</Text>
+      <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Tarih</Text>
       <TextInput
         value={date}
         onChangeText={onDateChange}
@@ -87,7 +87,7 @@ export function AssignDietForm({
         ]}
       />
 
-      <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Meal type</Text>
+      <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Öğün</Text>
       <View style={styles.mealRow}>
         {MEAL_OPTIONS.map((option) => {
           const active = option.key === mealType;
@@ -119,11 +119,11 @@ export function AssignDietForm({
         })}
       </View>
 
-      <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Content</Text>
+      <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>İçerik</Text>
       <TextInput
         value={content}
         onChangeText={setContent}
-        placeholder="200g chicken, rice, salad…"
+        placeholder="Tavuk, pirinç, salata…"
         placeholderTextColor={colors.outline}
         multiline
         style={[
@@ -158,7 +158,7 @@ export function AssignDietForm({
         ) : (
           <>
             <MaterialIcons name="restaurant" size={18} color={colors.onPrimary} />
-            <Text style={[styles.saveText, { color: colors.onPrimary }]}>Save Meal</Text>
+            <Text style={[styles.saveText, { color: colors.onPrimary }]}>Öğünü kaydet</Text>
           </>
         )}
       </Pressable>

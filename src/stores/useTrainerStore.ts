@@ -12,9 +12,13 @@ type TrainerState = {
   error: string | null;
   unsavedLock: boolean;
   setUnsavedLock: (locked: boolean) => void;
-  load: (trainerId: string) => Promise<void>;
+  setDiscardHandler: (handler: (() => void) | null) => void;
+  discardUnsaved: () => void;
+  load: (trainerId: string, opts?: { silent?: boolean }) => Promise<void>;
   toggleActive: (studentId: string, isActive: boolean) => Promise<void>;
 };
+
+let discardHandler: (() => void) | null = null;
 
 export const useTrainerStore = create<TrainerState>((set, get) => ({
   students: [],
@@ -22,15 +26,23 @@ export const useTrainerStore = create<TrainerState>((set, get) => ({
   error: null,
   unsavedLock: false,
   setUnsavedLock: (locked) => set({ unsavedLock: locked }),
+  setDiscardHandler: (handler) => {
+    discardHandler = handler;
+  },
+  discardUnsaved: () => {
+    set({ unsavedLock: false });
+    discardHandler?.();
+  },
 
-  load: async (trainerId) => {
-    set({ loading: true, error: null });
+  load: async (trainerId, opts) => {
+    if (!opts?.silent) set({ loading: true, error: null });
+    else set({ error: null });
     try {
       const students = await fetchTrainerStudents(trainerId);
       set({ students, loading: false });
     } catch (err) {
       set({
-        error: err instanceof Error ? err.message : 'Failed to load students',
+        error: err instanceof Error ? err.message : 'Öğrenciler yüklenemedi',
         loading: false,
       });
     }
@@ -48,7 +60,7 @@ export const useTrainerStore = create<TrainerState>((set, get) => ({
     } catch (err) {
       set({
         students: previous,
-        error: err instanceof Error ? err.message : 'Failed to update student status',
+        error: err instanceof Error ? err.message : 'Öğrenci durumu güncellenemedi',
       });
     }
   },

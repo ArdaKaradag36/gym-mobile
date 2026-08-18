@@ -46,18 +46,18 @@ export function AssignWorkoutForm({
   const handleSave = async () => {
     setFormError(null);
     if (!selected) {
-      setFormError('Select an exercise from the library.');
+      setFormError('Kütüphaneden bir egzersiz seç.');
       return;
     }
 
     const targetSets = Number(sets);
     const targetReps = Number(reps);
     if (!Number.isFinite(targetSets) || targetSets < 1) {
-      setFormError('Enter a valid set count.');
+      setFormError('Geçerli bir set sayısı gir.');
       return;
     }
     if (!Number.isFinite(targetReps) || targetReps < 1) {
-      setFormError('Enter a valid rep count.');
+      setFormError('Geçerli bir tekrar sayısı gir.');
       return;
     }
 
@@ -88,13 +88,13 @@ export function AssignWorkoutForm({
       ]}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.onSurface }]}>Add Exercise</Text>
+        <Text style={[styles.title, { color: colors.onSurface }]}>Egzersiz ekle</Text>
         <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
-          Assign a library movement to {studentName}&apos;s plan.
+          {studentName} planına kütüphaneden hareket ata.
         </Text>
       </View>
 
-      <Field label="Plan date (YYYY-MM-DD)" colors={colors}>
+      <Field label="Plan tarihi" colors={colors}>
         <TextInput
           value={date}
           onChangeText={onDateChange}
@@ -105,11 +105,11 @@ export function AssignWorkoutForm({
         />
       </Field>
 
-      <Field label="Workout title (optional)" colors={colors}>
+      <Field label="Antrenman başlığı (isteğe bağlı)" colors={colors}>
         <TextInput
           value={title}
           onChangeText={setTitle}
-          placeholder="Back Day"
+          placeholder="Sırt günü"
           placeholderTextColor={colors.outline}
           style={[styles.input, inputStyle(colors)]}
         />
@@ -124,7 +124,7 @@ export function AssignWorkoutForm({
 
       <View style={styles.row}>
         <View style={styles.half}>
-          <Field label="Sets" colors={colors}>
+          <Field label="Set" colors={colors}>
             <TextInput
               value={sets}
               onChangeText={setSets}
@@ -136,7 +136,7 @@ export function AssignWorkoutForm({
           </Field>
         </View>
         <View style={styles.half}>
-          <Field label="Reps" colors={colors}>
+          <Field label="Tekrar" colors={colors}>
             <TextInput
               value={reps}
               onChangeText={setReps}
@@ -169,7 +169,7 @@ export function AssignWorkoutForm({
         ) : (
           <>
             <MaterialIcons name="save" size={18} color={colors.onPrimary} />
-            <Text style={[styles.saveText, { color: colors.onPrimary }]}>Save</Text>
+            <Text style={[styles.saveText, { color: colors.onPrimary }]}>Kaydet</Text>
           </>
         )}
       </Pressable>

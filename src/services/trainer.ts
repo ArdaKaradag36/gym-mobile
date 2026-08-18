@@ -3,20 +3,26 @@ import type {
   DailyPlan,
   DailyWorkout,
   Exercise,
+  Food,
   MealType,
   Measurement,
   Profile,
   Program,
 } from '../types/database';
 import type { AssignmentForm, DayAssignment } from '../forms/studentDayAssignment';
+import { normalizeSetsReps, parseSetsReps } from '../forms/setsReps';
 import { MEASUREMENT_COLUMNS, PLAN_EMBED, PROFILE_COLUMNS, PROGRAM_COLUMNS } from './queries';
 import { isSupabaseConfigured, supabase } from './supabaseClient';
+import { amountDisplayForSave, gramsFromQuantity, parseGrams } from '../forms/macros';
+import { packDailyNotes } from '../forms/dailyNotes';
 import { addDaysIso, parseOptionalNumber, todayIsoDate } from '../utils/format';
+import { fetchUnreadNoteCounts } from './studentNotes';
 import { sortStudentWorkouts } from '../utils/workoutSort';
 import type { DietWithFoods, StudentPlanDay, WorkoutWithExercise } from './workouts';
 
 export type StudentStatus = {
   hasDailyNote: boolean;
+  unreadNotes: number;
   workoutCompleted: boolean;
   workoutInProgress: boolean;
   hydrationOnTrack: boolean;
@@ -41,6 +47,7 @@ function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
 function emptyStatus(): StudentStatus {
   return {
     hasDailyNote: false,
+    unreadNotes: 0,
     workoutCompleted: false,
     workoutInProgress: false,
     hydrationOnTrack: false,
@@ -65,6 +72,7 @@ function statusFromPlan(plan: StudentPlanDay | null | undefined): StudentStatus 
 
   return {
     hasDailyNote: Boolean(plan.daily_note?.trim()),
+    unreadNotes: 0,
     workoutCompleted,
     workoutInProgress,
     hydrationOnTrack,
@@ -93,7 +101,13 @@ function toStudentPlanDay(
     ),
     daily_diets: (plan.daily_diets ?? []).map((diet) => ({
       ...diet,
-      diet_foods: (diet.diet_foods ?? []).slice().sort((a, b) => a.order_index - b.order_index),
+      diet_foods: (diet.diet_foods ?? [])
+        .slice()
+        .sort((a, b) => a.order_index - b.order_index)
+        .map((food) => ({
+          ...food,
+          foods: unwrapOne(food.foods as never),
+        })),
     })),
   };
 }
@@ -144,10 +158,18 @@ export async function fetchTrainerStudents(
     }
   }
 
-  return (students as Profile[]).map((student) => ({
-    ...student,
-    status: statusFromPlan(planByStudent.get(student.id)),
-  }));
+  const unreadCounts = await fetchUnreadNoteCounts(trainerId).catch(() => ({} as Record<string, number>));
+
+  return (students as Profile[]).map((student) => {
+    const status = statusFromPlan(planByStudent.get(student.id));
+    return {
+      ...student,
+      status: {
+        ...status,
+        unreadNotes: unreadCounts[student.id] ?? 0,
+      },
+    };
+  });
 }
 
 export async function setStudentActive(studentId: string, isActive: boolean): Promise<void> {
@@ -170,6 +192,36 @@ export async function fetchActiveExercises(): Promise<Exercise[]> {
 
   if (error) throw error;
   return (data ?? []) as Exercise[];
+}
+
+export async function fetchActiveFoods(): Promise<Food[]> {
+  if (!isSupabaseConfigured) return [];
+
+  const { data, error } = await supabase
+    .from('foods')
+    .select(
+      'id, name, category, kcal_per_100g, protein_per_100g, carb_per_100g, fat_per_100g, is_active, meal_types, unit_label, grams_per_unit',
+    )
+    .eq('is_active', true)
+    .order('category', { ascending: true })
+    .order('name', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as Food[];
+}
+
+export async function fetchFoodUnitMap(ids: string[]) {
+  const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  const empty = new Map<string, Pick<Food, 'id' | 'name' | 'unit_label' | 'grams_per_unit'>>();
+  if (!unique.length || !isSupabaseConfigured) return empty;
+
+  const { data, error } = await supabase
+    .from('foods')
+    .select('id, name, unit_label, grams_per_unit')
+    .in('id', unique);
+
+  if (error) throw error;
+  return new Map((data ?? []).map((item) => [item.id, item as Pick<Food, 'id' | 'name' | 'unit_label' | 'grams_per_unit'>]));
 }
 
 export async function fetchLatestProgramForStudent(
@@ -251,35 +303,50 @@ async function replaceDayContents(planId: string, day: DayAssignment): Promise<v
   await supabase.from('daily_diets').delete().eq('daily_plan_id', planId);
 
   const workoutRows = day.workouts
-    .filter((row) => row.exercise_id.trim())
-    .map((row, index) => ({
+    .filter((row) => row.is_cardio || row.exercise_id.trim())
+    .map((row, index) => {
+      const scheme = row.is_cardio ? '' : normalizeSetsReps(row.reps_scheme);
+      const { sets, reps } = parseSetsReps(scheme);
+      return {
       daily_plan_id: planId,
-      exercise_id: row.exercise_id,
+      exercise_id: row.exercise_id.trim() || null,
       order_index: index + 1,
-      target_sets: null,
-      target_reps: row.reps_scheme || null,
-      reps_scheme: row.reps_scheme || null,
-      rest_seconds: parseOptionalNumber(row.rest_seconds),
-      muscle_group: row.muscle_group || null,
+      target_sets: row.is_cardio ? null : parseOptionalNumber(sets),
+      target_reps: row.is_cardio ? null : reps || null,
+      reps_scheme: row.is_cardio ? null : scheme || null,
+      rest_seconds: row.is_cardio ? null : parseOptionalNumber(row.rest_seconds),
+      muscle_group: row.is_cardio ? 'cardio' : row.muscle_group || null,
       is_cardio: row.is_cardio,
-      cardio_params: row.cardio_params || null,
-      weight_min: parseOptionalNumber(row.weight_min),
-      weight_max: parseOptionalNumber(row.weight_max),
+      cardio_params: row.is_cardio ? row.cardio_params || null : null,
+      weight_min: row.is_cardio ? null : parseOptionalNumber(row.weight_min),
+      weight_max: row.is_cardio ? null : parseOptionalNumber(row.weight_max),
       actual_weight_used: null,
       student_note: null,
       is_completed: false,
-    }));
+    };
+    });
 
   if (workoutRows.length > 0) {
     const { error } = await supabase.from('daily_workouts').insert(workoutRows);
     if (error) throw error;
   }
 
+  const foodUnits = await fetchFoodUnitMap(
+    day.meals.flatMap((meal) => meal.foods.map((food) => food.food_id)),
+  );
+
   for (const meal of day.meals) {
-    const foods = meal.foods.filter((food) => food.food_name.trim());
-    const content =
-      foods.map((food) => `${food.food_name}${food.amount ? ` ${food.amount}` : ''}`).join(', ') ||
-      meal.meal_type;
+    const foods = meal.foods.filter((food) => food.food_id.trim());
+    if (foods.length === 0) continue;
+
+    const content = foods
+      .map((food) => {
+        const qty = parseGrams(food.amount_grams);
+        const unit = foodUnits.get(food.food_id);
+        const amount = amountDisplayForSave(qty, unit);
+        return `${food.food_name || 'Besin'}${amount ? ` ${amount}` : ''}`;
+      })
+      .join(', ');
 
     const { data: dietRow, error: dietError } = await supabase
       .from('daily_diets')
@@ -294,16 +361,23 @@ async function replaceDayContents(planId: string, day: DayAssignment): Promise<v
 
     if (dietError) throw dietError;
 
-    if (foods.length > 0 && dietRow) {
+    if (dietRow) {
       const { error: foodError } = await supabase.from('diet_foods').insert(
-        foods.map((food, index) => ({
-          daily_diet_id: dietRow.id,
-          food_name: food.food_name.trim(),
-          amount: food.amount.trim() || null,
-          note: food.note.trim() || null,
-          training_day_only: food.training_day_only,
-          order_index: index,
-        })),
+        foods.map((food, index) => {
+          const qty = parseGrams(food.amount_grams);
+          const unit = foodUnits.get(food.food_id);
+          const grams = gramsFromQuantity(qty, unit);
+          return {
+            daily_diet_id: dietRow.id,
+            food_id: food.food_id.trim() || null,
+            food_name: food.food_name.trim() || 'Besin',
+            amount: amountDisplayForSave(qty, unit),
+            amount_in_grams: grams > 0 ? grams : null,
+            note: food.note.trim() || null,
+            training_day_only: food.training_day_only,
+            order_index: index,
+          };
+        }),
       );
       if (foodError) throw foodError;
     }
@@ -326,7 +400,7 @@ export async function publishAssignment(params: {
     trainer_id: params.trainerId,
     start_date: startDate,
     end_date: endDate,
-    title: params.form.title.trim() || '14-day program',
+    title: params.form.title.trim() || '14 günlük program',
     status,
     start_weight: parseOptionalNumber(params.form.start_weight),
     target_weight: parseOptionalNumber(params.form.target_weight),
@@ -335,6 +409,10 @@ export async function publishAssignment(params: {
     carb_g: parseOptionalNumber(params.form.carb_g),
     fat_g: parseOptionalNumber(params.form.fat_g),
     trainer_notes: params.form.trainer_notes.trim() || null,
+    daily_notes: packDailyNotes(
+      params.form.trainer_notes,
+      params.form.days.map((day) => day.daily_note),
+    ),
   };
 
   let program: Program;
@@ -358,13 +436,13 @@ export async function publishAssignment(params: {
     program = data as Program;
   }
 
-  for (const day of params.form.days) {
+  const writeDay = async (day: (typeof params.form.days)[number]) => {
     const planFields = {
       program_id: program.id,
       date: day.date,
       water_goal: parseOptionalNumber(day.water_goal) ?? 4000,
       water_consumed: 0,
-      daily_note: day.daily_note.trim() || null,
+      daily_note: null,
       workout_title: day.workout_title.trim() || null,
       is_rest_day: day.is_rest_day,
       is_training_day: day.is_training_day,
@@ -386,10 +464,15 @@ export async function publishAssignment(params: {
     }
 
     if (!planId) {
-      throw new Error(`Could not resolve daily plan for ${day.date}.`);
+      throw new Error(`${day.date} için günlük plan bulunamadı.`);
     }
 
     await replaceDayContents(planId, day);
+  };
+
+  const BATCH = 4;
+  for (let index = 0; index < params.form.days.length; index += BATCH) {
+    await Promise.all(params.form.days.slice(index, index + BATCH).map(writeDay));
   }
 
   return program;
@@ -438,7 +521,7 @@ export async function assignWorkoutExercise(params: {
 }): Promise<void> {
   const plan = await fetchStudentPlanForDate(params.studentId, params.date);
   if (!plan) {
-    throw new Error('Create a 14-day program first, then assign exercises.');
+    throw new Error('Önce 14 günlük program oluştur, sonra egzersiz ata.');
   }
 
   const { count } = await supabase
@@ -467,7 +550,7 @@ export async function assignDietMeal(params: {
 }): Promise<void> {
   const plan = await fetchStudentPlanForDate(params.studentId, params.date);
   if (!plan) {
-    throw new Error('Create a 14-day program first, then assign meals.');
+    throw new Error('Önce 14 günlük program oluştur, sonra öğün ata.');
   }
 
   const { error } = await supabase.from('daily_diets').insert({

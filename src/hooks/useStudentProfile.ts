@@ -33,7 +33,7 @@ export function useStudentProfile() {
       const data = await fetchStudentProfile(user.id);
       setProfile(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
+      setError(err instanceof Error ? err.message : 'Profil yüklenemedi');
       setProfile(null);
     } finally {
       setLoading(false);

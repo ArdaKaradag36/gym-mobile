@@ -1,4 +1,5 @@
-import { useCallback, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -7,37 +8,72 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CountdownBadge } from '../../components/student/CountdownBadge';
+import { NoteToTrainer } from '../../components/student/NoteToTrainer';
 import { StudentScreenShell } from '../../components/student/StudentScreenShell';
 import { WaterStepper } from '../../components/student/WaterStepper';
+import { noteForDayIndex } from '../../forms/dailyNotes';
+import { fetchStudentInbox } from '../../services/studentNotes';
+import type { StudentNote } from '../../types/database';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { daysLeftInProgram, useStudentDayStore } from '../../stores/useStudentDayStore';
+import { useStudentProfileContext } from '../../components/student/StudentProfileProvider';
+import { daysBetweenIso, todayIsoDate } from '../../utils/format';
+import { screenBottomPadding } from '../../utils/layout';
 
 export function HomeScreen() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const studentId = useAuthStore((state) => state.profile?.id);
+  const { profile } = useStudentProfileContext();
   const { today, program, loading, error, load, adjustWater } = useStudentDayStore();
+  const [inbox, setInbox] = useState<StudentNote[]>([]);
 
   const refresh = useCallback(() => {
-    if (studentId) void load(studentId);
+    if (studentId) {
+      void load(studentId);
+      void fetchStudentInbox(studentId)
+        .then(setInbox)
+        .catch(() => setInbox([]));
+    }
   }, [load, studentId]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (!studentId) return;
+    void fetchStudentInbox(studentId)
+      .then(setInbox)
+      .catch(() => setInbox([]));
+  }, [studentId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!studentId) return;
+      const hasData = Boolean(
+        useStudentDayStore.getState().today || useStudentDayStore.getState().days.length,
+      );
+      void load(studentId, { silent: hasData });
+    }, [load, studentId]),
+  );
 
   const workouts = today?.daily_workouts ?? [];
   const meals = today?.daily_diets ?? [];
   const workoutDone = workouts.filter((item) => item.is_completed).length;
   const mealsDone = meals.filter((item) => item.is_completed).length;
+  const dayIndex = program?.start_date
+    ? daysBetweenIso(program.start_date, today?.date ?? todayIsoDate())
+    : 0;
+  const coachNote =
+    noteForDayIndex(program?.daily_notes, dayIndex) || today?.daily_note?.trim() || '';
 
   return (
     <StudentScreenShell>
       <ScrollView
-        contentContainerStyle={styles.content}
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.content, { paddingBottom: screenBottomPadding(insets) }]}
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -62,9 +98,18 @@ export function HomeScreen() {
         >
           <Text style={[styles.noteLabel, { color: colors.neonGreen }]}>GÜNLÜK MESAJ</Text>
           <Text style={[styles.noteBody, { color: colors.onSurface }]}>
-            {today?.daily_note?.trim() || 'Bugün için not yok.'}
+            {coachNote || 'Bugün için not yok.'}
           </Text>
         </View>
+
+        {studentId && profile?.trainer_id ? (
+          <NoteToTrainer
+            studentId={studentId}
+            trainerId={profile.trainer_id}
+            notes={inbox}
+            onSent={(note) => setInbox((current) => [note, ...current])}
+          />
+        ) : null}
 
         <View style={styles.cards}>
           <SummaryCard
@@ -133,7 +178,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.marginPage,
     paddingTop: spacing.stackLg,
-    paddingBottom: 120,
     gap: spacing.stackMd,
     flexGrow: 1,
   },

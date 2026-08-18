@@ -51,6 +51,7 @@ export function AuthScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={[
           styles.content,
           {
@@ -79,7 +80,7 @@ export function AuthScreen() {
           <TextInput
             value={email}
             onChangeText={setEmail}
-            placeholder="you@forge.app"
+            placeholder="ornek@eposta.com"
             placeholderTextColor={colors.outline}
             autoCapitalize="none"
             autoCorrect={false}

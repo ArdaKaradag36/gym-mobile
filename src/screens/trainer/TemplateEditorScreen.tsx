@@ -1,29 +1,35 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
-import { Controller, useFieldArray, useForm, useFormState } from 'react-hook-form';
+import { Controller, useFieldArray, useForm, useFormState, useWatch } from 'react-hook-form';
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CardioFields } from '../../components/trainer/CardioFields';
 import { ExercisePickerButton, ExercisePickerModal } from '../../components/trainer/ExercisePicker';
+import { FoodAmountFields } from '../../components/trainer/FoodAmountFields';
+import { FoodPickerModal } from '../../components/trainer/FoodPicker';
+import { MacroTotals } from '../../components/MacroTotals';
 import { MuscleGroupPicker } from '../../components/trainer/MuscleGroupPicker';
+import { SetsRepsFields } from '../../components/trainer/SetsRepsFields';
 import {
   emptyDietTemplateForm,
   emptyWorkoutTemplateForm,
   type DietTemplateForm,
   type WorkoutTemplateForm,
 } from '../../forms/templateForm';
-import { emptyFoodRow, emptyWorkoutRow } from '../../forms/studentDayAssignment';
+import { emptyCardioRow, emptyFoodRow, emptyWorkoutRow } from '../../forms/studentDayAssignment';
+import { formatMacroLine, inputQuantityFromGrams, macrosForFood, parseGrams, sumFoodMacros, sumMealFoodMacros } from '../../forms/macros';
 import { useExercises } from '../../hooks/useExercises';
+import { useFoods } from '../../hooks/useFoods';
 import { useUnsavedChangesGuard } from '../../navigation/useUnsavedChangesGuard';
 import type { TrainerLibraryStackParamList } from '../../navigation/TrainerLibraryStack';
 import {
@@ -35,8 +41,10 @@ import {
 } from '../../services/templates';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { MEAL_LABELS } from '../../types/database';
+import type { Food } from '../../types/database';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
+import { screenBottomPadding } from '../../utils/layout';
 
 type Props = NativeStackScreenProps<TrainerLibraryStackParamList, 'TemplateEditor'>;
 
@@ -68,7 +76,8 @@ function WorkoutEditor({
   });
   const { isDirty } = useFormState({ control });
   const items = useFieldArray({ control, name: 'items' });
-  useUnsavedChangesGuard({ isDirty, navigation });
+  const muscleGroup = useWatch({ control, name: 'muscle_group' });
+  const { skipNext, sheet } = useUnsavedChangesGuard({ isDirty, navigation, saving });
 
   useEffect(() => {
     if (!trainerId || !templateId) return;
@@ -90,6 +99,7 @@ function WorkoutEditor({
     try {
       await saveWorkoutTemplate(trainerId, values, templateId);
       reset(values);
+      skipNext();
       navigation.goBack();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Kayıt başarısız');
@@ -106,7 +116,10 @@ function WorkoutEditor({
         onSave={() => void onSave()}
         saving={saving}
       />
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}>
+      <ScrollView
+        scrollEnabled={pickerIndex == null}
+        contentContainerStyle={[styles.content, { paddingBottom: screenBottomPadding(insets) }]}
+      >
         {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
         <Controller
           control={control}
@@ -131,6 +144,14 @@ function WorkoutEditor({
             key={row.id}
             style={[styles.card, { borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerHigh }]}
           >
+            {row.is_cardio ? (
+              <Controller
+                control={control}
+                name={`items.${index}.cardio_params`}
+                render={({ field }) => <CardioFields value={field.value} onChange={field.onChange} />}
+              />
+            ) : (
+              <>
             <Controller
               control={control}
               name={`items.${index}.exercise_id`}
@@ -144,66 +165,60 @@ function WorkoutEditor({
             <Controller
               control={control}
               name={`items.${index}.reps_scheme`}
-              render={({ field }) => (
-                <TextInput
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  placeholder="Set/tekrar: 4*12/8/6/6"
-                  placeholderTextColor={colors.outline}
-                  style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
-                />
-              )}
+              render={({ field }) => <SetsRepsFields value={field.value} onChange={field.onChange} />}
             />
             <View style={styles.row}>
               <Controller
                 control={control}
                 name={`items.${index}.weight_min`}
                 render={({ field }) => (
-                  <TextInput
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    placeholder="Min kg"
-                    placeholderTextColor={colors.outline}
-                    style={[styles.input, { flex: 1, color: colors.onSurface, borderColor: colors.outlineVariant }]}
-                  />
+                  <View style={styles.weightField}>
+                    <TextInput
+                      value={field.value}
+                      onChangeText={field.onChange}
+                      placeholder="Min kg"
+                      placeholderTextColor={colors.outline}
+                      style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
+                    />
+                  </View>
                 )}
               />
               <Controller
                 control={control}
                 name={`items.${index}.weight_max`}
                 render={({ field }) => (
-                  <TextInput
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    placeholder="Max kg"
-                    placeholderTextColor={colors.outline}
-                    style={[styles.input, { flex: 1, color: colors.onSurface, borderColor: colors.outlineVariant }]}
-                  />
+                  <View style={styles.weightField}>
+                    <TextInput
+                      value={field.value}
+                      onChangeText={field.onChange}
+                      placeholder="Max kg"
+                      placeholderTextColor={colors.outline}
+                      style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
+                    />
+                  </View>
                 )}
               />
             </View>
-            <Controller
-              control={control}
-              name={`items.${index}.is_cardio`}
-              render={({ field }) => (
-                <View style={styles.row}>
-                  <Text style={{ color: colors.onSurfaceVariant }}>Kardiyo</Text>
-                  <Switch value={field.value} onValueChange={field.onChange} />
-                </View>
-              )}
-            />
+              </>
+            )}
             <Pressable onPress={() => items.remove(index)}>
               <Text style={{ color: colors.error }}>Sil</Text>
             </Pressable>
           </View>
         ))}
+        <View style={styles.row}>
         <Pressable onPress={() => items.append(emptyWorkoutRow())}>
           <Text style={{ color: colors.neonGreen, fontFamily: 'Inter_600SemiBold' }}>+ Hareket</Text>
         </Pressable>
+        <Pressable onPress={() => items.append(emptyCardioRow())}>
+          <Text style={{ color: colors.electricBlueSoft, fontFamily: 'Inter_600SemiBold' }}>+ Kardiyo</Text>
+        </Pressable>
+        </View>
       </ScrollView>
       <ExercisePickerModal
         visible={pickerIndex != null}
         exercises={exercises}
+        muscleGroup={muscleGroup || null}
         selectedId={pickerIndex == null ? null : getValues(`items.${pickerIndex}.exercise_id`)}
         onClose={() => setPickerIndex(null)}
         onSelect={(exercise) => {
@@ -212,12 +227,10 @@ function WorkoutEditor({
           if (exercise.category) {
             setValue(`items.${pickerIndex}.muscle_group`, exercise.category, { shouldDirty: true });
           }
-          if (exercise.is_cardio) {
-            setValue(`items.${pickerIndex}.is_cardio`, true, { shouldDirty: true });
-          }
           setPickerIndex(null);
         }}
       />
+      {sheet}
     </View>
   );
 }
@@ -232,15 +245,19 @@ function DietEditor({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const trainerId = useAuthStore((state) => state.profile?.id);
+  const { foods } = useFoods();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [foodPicker, setFoodPicker] = useState<{ mealIndex: number; foodIndex: number } | null>(null);
 
-  const { control, handleSubmit, reset } = useForm<DietTemplateForm>({
+  const { control, handleSubmit, reset, setValue, getValues } = useForm<DietTemplateForm>({
     defaultValues: emptyDietTemplateForm(),
   });
   const { isDirty } = useFormState({ control });
   const meals = useFieldArray({ control, name: 'meals' });
-  useUnsavedChangesGuard({ isDirty, navigation });
+  const mealValues = useWatch({ control, name: 'meals' });
+  const totals = sumMealFoodMacros(mealValues, foods);
+  const { skipNext, sheet } = useUnsavedChangesGuard({ isDirty, navigation, saving });
 
   useEffect(() => {
     if (!trainerId || !templateId) return;
@@ -251,12 +268,19 @@ function DietEditor({
         name: found.name,
         meals: (found.diet_template_meals ?? []).map((meal) => ({
           meal_type: meal.meal_type,
-          foods: (meal.diet_template_foods ?? []).map((food) => ({
-            food_name: food.food_name,
-            amount: food.amount ?? '',
-            note: food.note ?? '',
-            training_day_only: food.training_day_only,
-          })),
+          foods: (meal.diet_template_foods ?? []).map((food) => {
+            const grams =
+              food.amount_in_grams != null
+                ? parseGrams(food.amount_in_grams)
+                : parseGrams(food.amount);
+            return {
+              food_id: food.food_id ?? '',
+              food_name: food.foods?.name ?? food.food_name,
+              amount_grams: inputQuantityFromGrams(grams, food.foods),
+              note: food.note ?? '',
+              training_day_only: food.training_day_only,
+            };
+          }),
         })),
       });
     });
@@ -269,6 +293,7 @@ function DietEditor({
     try {
       await saveDietTemplate(trainerId, values, templateId);
       reset(values);
+      skipNext();
       navigation.goBack();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Kayıt başarısız');
@@ -285,7 +310,7 @@ function DietEditor({
         onSave={() => void onSave()}
         saving={saving}
       />
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: screenBottomPadding(insets) }]}>
         {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
         <Controller
           control={control}
@@ -301,9 +326,40 @@ function DietEditor({
           )}
         />
         {meals.fields.map((meal, mealIndex) => (
-          <MealFoods key={meal.id} control={control} mealIndex={mealIndex} />
+          <MealFoods
+            key={meal.id}
+            control={control}
+            mealIndex={mealIndex}
+            foods={foods}
+            onPickFood={(foodIndex) => setFoodPicker({ mealIndex, foodIndex })}
+          />
         ))}
+        <MacroTotals macros={totals} />
       </ScrollView>
+      <FoodPickerModal
+        visible={foodPicker != null}
+        foods={foods}
+        mealType={foodPicker ? getValues(`meals.${foodPicker.mealIndex}.meal_type`) : null}
+        selectedId={
+          foodPicker
+            ? getValues(`meals.${foodPicker.mealIndex}.foods.${foodPicker.foodIndex}.food_id`)
+            : null
+        }
+        onClose={() => setFoodPicker(null)}
+        onSelect={(food) => {
+          if (!foodPicker) return;
+          setValue(`meals.${foodPicker.mealIndex}.foods.${foodPicker.foodIndex}.food_id`, food.id, {
+            shouldDirty: true,
+          });
+          setValue(
+            `meals.${foodPicker.mealIndex}.foods.${foodPicker.foodIndex}.food_name`,
+            food.name,
+            { shouldDirty: true },
+          );
+          setFoodPicker(null);
+        }}
+      />
+      {sheet}
     </View>
   );
 }
@@ -311,12 +367,18 @@ function DietEditor({
 function MealFoods({
   control,
   mealIndex,
+  foods,
+  onPickFood,
 }: {
   control: ReturnType<typeof useForm<DietTemplateForm>>['control'];
   mealIndex: number;
+  foods: Food[];
+  onPickFood: (foodIndex: number) => void;
 }) {
   const { colors } = useTheme();
-  const foods = useFieldArray({ control, name: `meals.${mealIndex}.foods` });
+  const mealFoods = useFieldArray({ control, name: `meals.${mealIndex}.foods` });
+  const mealFoodValues = useWatch({ control, name: `meals.${mealIndex}.foods` });
+  const mealLine = formatMacroLine(sumFoodMacros(mealFoodValues, foods));
 
   return (
     <View style={[styles.card, { borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}>
@@ -324,42 +386,55 @@ function MealFoods({
         control={control}
         name={`meals.${mealIndex}.meal_type`}
         render={({ field }) => (
-          <Text style={{ color: colors.onSurface, fontFamily: 'Montserrat_700Bold' }}>
-            {MEAL_LABELS[field.value] ?? field.value}
-          </Text>
+          <View style={{ gap: 2 }}>
+            <Text style={{ color: colors.onSurface, fontFamily: 'Montserrat_700Bold' }}>
+              {MEAL_LABELS[field.value] ?? field.value}
+            </Text>
+            {mealLine ? (
+              <Text style={{ color: colors.electricBlueSoft, fontFamily: 'Inter_600SemiBold', fontSize: 12 }}>
+                {mealLine}
+              </Text>
+            ) : null}
+          </View>
         )}
       />
-      {foods.fields.map((food, foodIndex) => (
+      {mealFoods.fields.map((food, foodIndex) => (
         <View key={food.id} style={{ gap: 6 }}>
           <Controller
             control={control}
-            name={`meals.${mealIndex}.foods.${foodIndex}.food_name`}
-            render={({ field }) => (
-              <TextInput
-                value={field.value}
-                onChangeText={field.onChange}
-                placeholder="YUMURTA"
-                placeholderTextColor={colors.outline}
-                style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
+            name={`meals.${mealIndex}.foods.${foodIndex}.food_id`}
+            render={({ field: idField }) => (
+              <Controller
+                control={control}
+                name={`meals.${mealIndex}.foods.${foodIndex}.food_name`}
+                render={({ field: nameField }) => (
+                  <Controller
+                    control={control}
+                    name={`meals.${mealIndex}.foods.${foodIndex}.amount_grams`}
+                    render={({ field: gramsField }) => (
+                      <FoodAmountFields
+                        selected={foods.find((item) => item.id === idField.value) ?? null}
+                        fallbackName={nameField.value}
+                        grams={gramsField.value}
+                        macros={macrosForFood(
+                          { food_id: idField.value, amount_grams: gramsField.value },
+                          foods,
+                        )}
+                        onPick={() => onPickFood(foodIndex)}
+                        onGramsChange={gramsField.onChange}
+                      />
+                    )}
+                  />
+                )}
               />
             )}
           />
-          <Controller
-            control={control}
-            name={`meals.${mealIndex}.foods.${foodIndex}.amount`}
-            render={({ field }) => (
-              <TextInput
-                value={field.value}
-                onChangeText={field.onChange}
-                placeholder="75GR"
-                placeholderTextColor={colors.outline}
-                style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
-              />
-            )}
-          />
+          <Pressable onPress={() => mealFoods.remove(foodIndex)}>
+            <Text style={{ color: colors.error }}>Sil</Text>
+          </Pressable>
         </View>
       ))}
-      <Pressable onPress={() => foods.append(emptyFoodRow())}>
+      <Pressable onPress={() => mealFoods.append(emptyFoodRow())}>
         <Text style={{ color: colors.electricBlueSoft }}>+ Besin</Text>
       </Pressable>
     </View>
@@ -390,7 +465,11 @@ function EditorHeader({
         },
       ]}
     >
-      <Pressable onPress={onBack} style={[styles.iconBtn, { backgroundColor: colors.surfaceContainer }]}>
+      <Pressable
+        onPress={onBack}
+        disabled={saving}
+        style={[styles.iconBtn, { backgroundColor: colors.surfaceContainer, opacity: saving ? 0.4 : 1 }]}
+      >
         <MaterialIcons name="arrow-back" size={20} color={colors.onSurface} />
       </Pressable>
       <Text style={[styles.title, { color: colors.onSurface }]}>{title}</Text>
@@ -436,6 +515,8 @@ const styles = StyleSheet.create({
   },
   input: {
     minHeight: 44,
+    minWidth: 0,
+    width: '100%',
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingHorizontal: 12,
@@ -446,11 +527,17 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     padding: spacing.stackMd,
     gap: 10,
+    overflow: 'hidden',
+    alignSelf: 'stretch',
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: 8,
+    width: '100%',
+  },
+  weightField: {
+    flex: 1,
+    minWidth: 0,
   },
 });

@@ -10,7 +10,7 @@ export function useTrainerStudents() {
   const [students, setStudents] = useState<TrainerStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [trainerName, setTrainerName] = useState('Trainer');
+  const [trainerName, setTrainerName] = useState('Antrenör');
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -19,7 +19,7 @@ export function useTrainerStudents() {
     try {
       if (!isSupabaseConfigured) {
         setStudents([]);
-        setError('Supabase is not configured. Add your keys to .env.');
+        setError('Supabase ayarlı değil. .env anahtarlarını kontrol et.');
         return;
       }
 
@@ -29,7 +29,7 @@ export function useTrainerStudents() {
 
       if (!user) {
         setStudents([]);
-        setError('Sign in as a trainer to view your students.');
+        setError('Öğrencileri görmek için antrenör olarak giriş yap.');
         return;
       }
 
@@ -45,14 +45,14 @@ export function useTrainerStudents() {
 
       if (profile?.role && profile.role !== 'trainer' && profile.role !== 'admin') {
         setStudents([]);
-        setError('This account is not a trainer.');
+        setError('Bu hesap antrenör değil.');
         return;
       }
 
       const data = await fetchTrainerStudents(user.id);
       setStudents(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load students');
+      setError(err instanceof Error ? err.message : 'Öğrenciler yüklenemedi');
       setStudents([]);
     } finally {
       setLoading(false);

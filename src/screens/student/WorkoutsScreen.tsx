@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -10,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StudentScreenShell } from '../../components/student/StudentScreenShell';
 import type { StudentWorkoutsStackParamList } from '../../navigation/StudentWorkoutsStack';
@@ -18,11 +20,13 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useStudentDayStore } from '../../stores/useStudentDayStore';
 import { formatShortDate, todayIsoDate } from '../../utils/format';
+import { screenBottomPadding } from '../../utils/layout';
 
 type Props = NativeStackScreenProps<StudentWorkoutsStackParamList, 'WorkoutDays'>;
 
 export function WorkoutsScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const studentId = useAuthStore((state) => state.profile?.id);
   const { days, loading, error, load } = useStudentDayStore();
 
@@ -30,16 +34,20 @@ export function WorkoutsScreen({ navigation }: Props) {
     if (studentId) void load(studentId);
   }, [load, studentId]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!studentId) return;
+      const hasData = useStudentDayStore.getState().days.length > 0;
+      void load(studentId, { silent: hasData });
+    }, [load, studentId]),
+  );
 
   const today = todayIsoDate();
 
   return (
     <StudentScreenShell>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: screenBottomPadding(insets) }]}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.neonGreen} />
         }
@@ -103,7 +111,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.marginPage,
     paddingTop: spacing.stackLg,
-    paddingBottom: 120,
     gap: spacing.stackSm,
   },
   title: {

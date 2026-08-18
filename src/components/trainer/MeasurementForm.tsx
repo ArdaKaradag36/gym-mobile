@@ -1,7 +1,7 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { Controller, useForm, useFormState } from 'react-hook-form';
-import { useEffect, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -22,6 +22,7 @@ import { parseTanitaPdf } from '../../services/pdfParse';
 import type { Measurement } from '../../types/database';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
+import { formatNumericDate } from '../../utils/format';
 
 type Props = {
   studentId: string;
@@ -30,7 +31,12 @@ type Props = {
   onDirtyChange?: (dirty: boolean) => void;
 };
 
-export function MeasurementForm({ studentId, recent, onSaved, onDirtyChange }: Props) {
+export type MeasurementFormHandle = {
+  resetDirty: () => void;
+};
+
+export const MeasurementForm = forwardRef<MeasurementFormHandle, Props>(
+  function MeasurementForm({ studentId, recent, onSaved, onDirtyChange }, ref) {
   const { colors } = useTheme();
   const [saving, setSaving] = useState(false);
   const [parsing, setParsing] = useState(false);
@@ -40,6 +46,13 @@ export function MeasurementForm({ studentId, recent, onSaved, onDirtyChange }: P
     defaultValues: emptyMeasurementForm(),
   });
   const { isDirty } = useFormState({ control });
+
+  useImperativeHandle(ref, () => ({
+    resetDirty: () => {
+      reset(emptyMeasurementForm());
+      onDirtyChange?.(false);
+    },
+  }));
 
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -175,12 +188,13 @@ export function MeasurementForm({ studentId, recent, onSaved, onDirtyChange }: P
 
       {recent.slice(0, 3).map((row) => (
         <Text key={row.id} style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular' }}>
-          {row.date}: {row.weight ?? '—'} kg · %{row.body_fat_percent ?? row.body_fat ?? '—'}
+          {formatNumericDate(row.date)}: {row.weight ?? '—'} kg · %{row.body_fat_percent ?? row.body_fat ?? '—'}
         </Text>
       ))}
     </View>
   );
-}
+},
+);
 
 async function readPdfBytes(uri: string): Promise<Uint8Array> {
   try {
@@ -201,7 +215,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.stackMd },
+  wrap: { gap: spacing.stackMd, paddingBottom: spacing.stackLg },
   field: { gap: 4 },
   label: { fontFamily: 'Inter_600SemiBold', fontSize: 11 },
   input: {

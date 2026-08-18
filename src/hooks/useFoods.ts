@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { Exercise } from '../types/database';
-import { fetchActiveExercises } from '../services/trainer';
+import type { Food } from '../types/database';
+import { fetchActiveFoods } from '../services/trainer';
 import { isSupabaseConfigured } from '../services/supabaseClient';
 
-export function useExercises() {
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+export function useFoods() {
+  const [foods, setFoods] = useState<Food[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,14 +15,14 @@ export function useExercises() {
 
     try {
       if (!isSupabaseConfigured) {
-        setExercises([]);
+        setFoods([]);
         return;
       }
-      const data = await fetchActiveExercises();
-      setExercises(data);
+      const data = await fetchActiveFoods();
+      setFoods(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Egzersizler yüklenemedi');
-      setExercises([]);
+      setError(err instanceof Error ? err.message : 'Besinler yüklenemedi');
+      setFoods([]);
     } finally {
       setLoading(false);
     }
@@ -32,5 +32,5 @@ export function useExercises() {
     void refresh();
   }, [refresh]);
 
-  return { exercises, loading, error, refresh };
+  return { foods, loading, error, refresh };
 }

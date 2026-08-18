@@ -1,6 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StudentCard } from '../../components/trainer/StudentCard';
 import { SegmentedControl } from '../../components/trainer/SegmentedControl';
@@ -20,24 +22,32 @@ import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useTrainerStore } from '../../stores/useTrainerStore';
+import { screenBottomPadding } from '../../utils/layout';
 
 type Props = NativeStackScreenProps<TrainerStudentsStackParamList, 'StudentsList'>;
 type Filter = 'active' | 'passive' | 'all';
 
 export function StudentsScreen({ navigation }: Props) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const profile = useAuthStore((state) => state.profile);
   const { students, loading, error, load, toggleActive } = useTrainerStore();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('active');
+  const focusedOnce = useRef(false);
 
   const refresh = useCallback(() => {
     if (profile?.id) void load(profile.id);
   }, [load, profile?.id]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!profile?.id) return;
+      const silent = focusedOnce.current;
+      focusedOnce.current = true;
+      void load(profile.id, { silent });
+    }, [load, profile?.id]),
+  );
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -54,12 +64,12 @@ export function StudentsScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <TrainerTopNavbar trainerName={profile?.full_name ?? 'Trainer'} />
+      <TrainerTopNavbar trainerName={profile?.full_name ?? 'Antrenör'} />
 
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: screenBottomPadding(insets) }]}
         refreshControl={
           <RefreshControl
             refreshing={loading}
@@ -160,7 +170,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.marginPage,
     paddingTop: spacing.stackLg,
-    paddingBottom: 120,
     gap: spacing.gutterCard,
   },
   headerBlock: {

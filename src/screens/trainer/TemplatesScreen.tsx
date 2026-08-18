@@ -1,39 +1,42 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TrainerTopNavbar } from '../../components/trainer/TrainerTopNavbar';
 import { useTrainerStudents } from '../../hooks/useTrainerStudents';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
+import { screenBottomPadding } from '../../utils/layout';
 
 const PLACEHOLDER_TEMPLATES = [
   {
     id: '1',
-    tag: 'Hypertrophy',
+    tag: 'Hacim',
     tagTone: 'green' as const,
     title: 'Başlangıç Hacim',
-    meta: '4 Weeks · 3 Days/Wk',
+    meta: '4 hafta · haftada 3 gün',
   },
   {
     id: '2',
-    tag: 'Fat Loss',
+    tag: 'Yağ yakımı',
     tagTone: 'blue' as const,
     title: 'Yağ Yakımı',
-    meta: '6 Weeks · 4 Days/Wk',
+    meta: '6 hafta · haftada 4 gün',
   },
 ];
 
 export function TemplatesScreen() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { trainerName } = useTrainerStudents();
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <TrainerTopNavbar trainerName={trainerName} />
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: colors.onSurface }]}>Templates</Text>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: screenBottomPadding(insets) }]}>
+        <Text style={[styles.title, { color: colors.onSurface }]}>Şablonlar</Text>
         <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
-          Reusable 14-day program blueprints. Bulk apply coming next.
+          14 günlük tekrar kullanılabilir program şablonları.
         </Text>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
@@ -114,7 +117,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.marginPage,
     paddingTop: spacing.stackLg,
-    paddingBottom: 120,
     gap: spacing.stackMd,
   },
   title: {

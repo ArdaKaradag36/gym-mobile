@@ -22,7 +22,7 @@ export function useTodaysWorkouts() {
     try {
       if (!isSupabaseConfigured) {
         setPlan(null);
-        setError('Supabase is not configured. Add your keys to .env.');
+        setError('Supabase ayarlı değil. .env anahtarlarını kontrol et.');
         return;
       }
 
@@ -32,14 +32,14 @@ export function useTodaysWorkouts() {
 
       if (!user) {
         setPlan(null);
-        setError('Sign in to view today’s workout.');
+        setError('Bugünkü antrenmanı görmek için giriş yap.');
         return;
       }
 
       const data = await fetchTodaysWorkoutPlan(user.id);
       setPlan(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load workouts');
+      setError(err instanceof Error ? err.message : 'Antrenmanlar yüklenemedi');
       setPlan(null);
     } finally {
       setLoading(false);
@@ -77,7 +77,7 @@ export function useTodaysWorkouts() {
           ),
         };
       });
-      setError(err instanceof Error ? err.message : 'Failed to update exercise');
+      setError(err instanceof Error ? err.message : 'Egzersiz güncellenemedi');
     } finally {
       setUpdatingId(null);
     }
@@ -89,7 +89,7 @@ export function useTodaysWorkouts() {
       const parsed = trimmed === '' ? null : Number(trimmed);
 
       if (parsed !== null && Number.isNaN(parsed)) {
-        setError('Enter a valid weight.');
+        setError('Geçerli bir kilo gir.');
         return;
       }
 
@@ -109,7 +109,7 @@ export function useTodaysWorkouts() {
       try {
         await updateWorkoutWeight(workoutId, parsed);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to save weight');
+        setError(err instanceof Error ? err.message : 'Kilo kaydedilemedi');
         await refresh();
       } finally {
         setUpdatingId(null);

@@ -59,7 +59,13 @@ function toStudentPlanDay(
 ): StudentPlanDay {
   const diets = (plan.daily_diets ?? []).map((diet) => ({
     ...diet,
-    diet_foods: (diet.diet_foods ?? []).slice().sort((a, b) => a.order_index - b.order_index),
+    diet_foods: (diet.diet_foods ?? [])
+      .slice()
+      .sort((a, b) => a.order_index - b.order_index)
+      .map((food) => ({
+        ...food,
+        foods: unwrapOne(food.foods as never),
+      })),
   }));
 
   return {

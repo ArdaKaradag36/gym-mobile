@@ -75,11 +75,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: 'transparent',
-    paddingVertical: 10,
+    paddingVertical: 8,
     alignItems: 'center',
   },
   label: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
+    fontSize: 11,
   },
 });

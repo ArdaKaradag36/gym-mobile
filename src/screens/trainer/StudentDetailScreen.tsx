@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Controller, useForm, useFormState } from 'react-hook-form';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Controller, useForm, useFormState, useWatch } from 'react-hook-form';
 import {
   ActivityIndicator,
   Pressable,
@@ -15,10 +15,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExercisePickerModal } from '../../components/trainer/ExercisePicker';
+import { FoodPickerModal } from '../../components/trainer/FoodPicker';
 import { InlineDayEditor } from '../../components/trainer/InlineDayEditor';
-import { MeasurementForm } from '../../components/trainer/MeasurementForm';
+import {
+  MeasurementForm,
+  type MeasurementFormHandle,
+} from '../../components/trainer/MeasurementForm';
 import { MuscleGroupPicker } from '../../components/trainer/MuscleGroupPicker';
 import { SegmentedControl } from '../../components/trainer/SegmentedControl';
+import { StudentInbox } from '../../components/trainer/StudentInbox';
 import { validateAssignment } from '../../forms/assignmentSchema';
 import {
   assignmentFromServer,
@@ -26,6 +31,7 @@ import {
   type AssignmentForm,
 } from '../../forms/studentDayAssignment';
 import { useExercises } from '../../hooks/useExercises';
+import { useFoods } from '../../hooks/useFoods';
 import { useUnsavedChangesGuard } from '../../navigation/useUnsavedChangesGuard';
 import type { TrainerStudentsStackParamList } from '../../navigation/TrainerStudentsStack';
 import {
@@ -33,6 +39,7 @@ import {
   fetchTrainerPlanWindow,
   publishAssignment,
 } from '../../services/trainer';
+import { fetchStudentInbox, markStudentNotesRead } from '../../services/studentNotes';
 import {
   dietTemplateToMeals,
   fetchDietTemplates,
@@ -41,9 +48,11 @@ import {
 } from '../../services/templates';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useTrainerStore } from '../../stores/useTrainerStore';
-import type { DietTemplate, Measurement, Program, WorkoutTemplate } from '../../types/database';
+import type { DietTemplate, Measurement, Program, StudentNote, WorkoutTemplate } from '../../types/database';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
+import { formatWeekdayDay } from '../../utils/format';
+import { screenBottomPadding, STICKY_ACTION_HEIGHT } from '../../utils/layout';
 
 type DetailTab = 'workouts' | 'diets' | 'measurements';
 type Props = NativeStackScreenProps<TrainerStudentsStackParamList, 'StudentDetail'>;
@@ -54,7 +63,10 @@ export function StudentDetailScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const trainerId = useAuthStore((state) => state.profile?.id);
   const setUnsavedLock = useTrainerStore((state) => state.setUnsavedLock);
+  const setDiscardHandler = useTrainerStore((state) => state.setDiscardHandler);
   const { exercises } = useExercises();
+  const { foods } = useFoods();
+  const measurementRef = useRef<MeasurementFormHandle>(null);
 
   const [tab, setTab] = useState<DetailTab>('workouts');
   const [dayIndex, setDayIndex] = useState(0);
@@ -65,19 +77,25 @@ export function StudentDetailScreen({ navigation, route }: Props) {
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [workoutTemplates, setWorkoutTemplates] = useState<WorkoutTemplate[]>([]);
   const [dietTemplates, setDietTemplates] = useState<DietTemplate[]>([]);
+  const [studentNotes, setStudentNotes] = useState<StudentNote[]>([]);
   const [templateMuscle, setTemplateMuscle] = useState('');
   const [pickerIndex, setPickerIndex] = useState<number | null>(null);
+  const [foodPicker, setFoodPicker] = useState<{ mealIndex: number; foodIndex: number } | null>(
+    null,
+  );
   const [measurementDirty, setMeasurementDirty] = useState(false);
 
   const { control, handleSubmit, reset, setValue, getValues } = useForm<AssignmentForm>({
     defaultValues: emptyAssignmentForm(),
   });
   const { isDirty } = useFormState({ control });
+  const formDays = useWatch({ control, name: 'days' });
   const combinedDirty = isDirty || measurementDirty;
 
-  useUnsavedChangesGuard({
+  const { skipNext, sheet } = useUnsavedChangesGuard({
     isDirty: combinedDirty,
     navigation,
+    saving,
     message: 'Kaydedilmemiş değişiklikler var, çıkmak istediğinize emin misiniz?',
   });
 
@@ -86,26 +104,39 @@ export function StudentDetailScreen({ navigation, route }: Props) {
     return () => setUnsavedLock(false);
   }, [combinedDirty, setUnsavedLock]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  useEffect(() => {
+    setDiscardHandler(() => {
+      skipNext();
+      navigation.goBack();
+    });
+    return () => setDiscardHandler(null);
+  }, [navigation, setDiscardHandler, skipNext]);
+
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     setError(null);
     try {
-      const [{ program: nextProgram, days }, measurementRows, wTemplates, dTemplates] =
+      const [{ program: nextProgram, days }, measurementRows, wTemplates, dTemplates, inbox] =
         await Promise.all([
           fetchTrainerPlanWindow(studentId),
           fetchStudentMeasurements(studentId),
           trainerId ? fetchWorkoutTemplates(trainerId) : Promise.resolve([]),
           trainerId ? fetchDietTemplates(trainerId) : Promise.resolve([]),
+          fetchStudentInbox(studentId).catch(() => [] as StudentNote[]),
         ]);
       setProgram(nextProgram);
       setMeasurements(measurementRows);
       setWorkoutTemplates(wTemplates);
       setDietTemplates(dTemplates);
+      setStudentNotes(inbox);
       reset(assignmentFromServer(nextProgram, days));
+      if (trainerId && inbox.some((note) => !note.read_at)) {
+        void markStudentNotesRead(studentId, trainerId);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Öğrenci detayı yüklenemedi');
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [reset, studentId, trainerId]);
 
@@ -115,6 +146,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     setPickerIndex(null);
+    setFoodPicker(null);
   }, [dayIndex, tab]);
 
   const onPublish = handleSubmit(async (values) => {
@@ -127,14 +159,17 @@ export function StudentDetailScreen({ navigation, route }: Props) {
     setSaving(true);
     setError(null);
     try {
-      await publishAssignment({
+      const saved = await publishAssignment({
         studentId,
         trainerId,
         form: values,
         existingProgramId: program?.id,
         publish: true,
       });
-      await load();
+      setProgram(saved);
+      reset(getValues());
+      measurementRef.current?.resetDirty();
+      setMeasurementDirty(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ONAYLA başarısız');
     } finally {
@@ -158,9 +193,20 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 
   const applyDietTemplate = (template: DietTemplate) => {
     const meals = dietTemplateToMeals(template);
-    if (meals.length > 0) {
-      setValue(`days.${dayIndex}.meals`, meals, { shouldDirty: true });
-    }
+    if (meals.length === 0) return;
+    const cloneMeals = () =>
+      meals.map((meal) => ({
+        ...meal,
+        foods: meal.foods.map((food) => ({ ...food })),
+      }));
+    getValues('days').forEach((day, index) => {
+      const hasFood = day.meals.some((meal) =>
+        meal.foods.some((food) => food.food_id.trim()),
+      );
+      if (index === dayIndex || !hasFood) {
+        setValue(`days.${index}.meals`, cloneMeals(), { shouldDirty: true });
+      }
+    });
   };
 
   const selectedExerciseId =
@@ -180,7 +226,11 @@ export function StudentDetailScreen({ navigation, route }: Props) {
       >
         <Pressable
           onPress={() => navigation.goBack()}
-          style={[styles.backButton, { backgroundColor: colors.surfaceContainer }]}
+          disabled={saving}
+          style={[
+            styles.backButton,
+            { backgroundColor: colors.surfaceContainer, opacity: saving ? 0.4 : 1 },
+          ]}
         >
           <MaterialIcons name="arrow-back" size={20} color={colors.onSurface} />
         </Pressable>
@@ -195,7 +245,16 @@ export function StudentDetailScreen({ navigation, route }: Props) {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: 120 + insets.bottom }]}
+        scrollEnabled={pickerIndex == null}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingBottom: screenBottomPadding(
+              insets,
+              tab === 'measurements' ? 0 : STICKY_ACTION_HEIGHT,
+            ),
+          },
+        ]}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.neonGreen} />
         }
@@ -214,6 +273,8 @@ export function StudentDetailScreen({ navigation, route }: Props) {
         {error ? (
           <Text style={{ color: colors.error, fontFamily: 'Inter_400Regular' }}>{error}</Text>
         ) : null}
+
+        <StudentInbox notes={studentNotes} />
 
         {tab !== 'measurements' ? (
           <>
@@ -237,9 +298,10 @@ export function StudentDetailScreen({ navigation, route }: Props) {
                 <TextInput
                   value={field.value}
                   onChangeText={field.onChange}
-                  placeholder="Genel notlar (Excel NOTLAR bloğu)"
-                  placeholderTextColor={colors.outline}
-                  multiline
+              placeholder="Tüm günlere gidecek kısa mesaj"
+              placeholderTextColor={colors.outline}
+              multiline
+              maxLength={400}
                   style={[
                     styles.input,
                     { minHeight: 72, color: colors.onSurface, borderColor: colors.outlineVariant },
@@ -268,6 +330,15 @@ export function StudentDetailScreen({ navigation, route }: Props) {
                     }}
                   >
                     G{index + 1}
+                  </Text>
+                  <Text
+                    style={{
+                      color: dayIndex === index ? colors.onPrimary : colors.onSurfaceVariant,
+                      fontFamily: 'Inter_400Regular',
+                      fontSize: 10,
+                    }}
+                  >
+                    {formatWeekdayDay(formDays?.[index]?.date ?? '')}
                   </Text>
                 </Pressable>
               ))}
@@ -311,23 +382,26 @@ export function StudentDetailScreen({ navigation, route }: Props) {
               </ScrollView>
             ) : null}
 
-            {loading ? <ActivityIndicator color={colors.neonGreen} /> : null}
+            {loading && !program ? <ActivityIndicator color={colors.neonGreen} /> : null}
             <InlineDayEditor
               key={`${tab}-${dayIndex}`}
               control={control}
               dayIndex={dayIndex}
               exercises={exercises}
+              foods={foods}
               mode={tab === 'diets' ? 'diet' : 'workout'}
               onPickExercise={setPickerIndex}
+              onPickFood={(mealIndex, foodIndex) => setFoodPicker({ mealIndex, foodIndex })}
             />
           </>
         ) : null}
 
         <View style={tab === 'measurements' ? undefined : styles.hidden}>
           <MeasurementForm
+            ref={measurementRef}
             studentId={studentId}
             recent={measurements}
-            onSaved={load}
+            onSaved={() => load({ silent: true })}
             onDirtyChange={setMeasurementDirty}
           />
         </View>
@@ -338,7 +412,6 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           style={[
             styles.sticky,
             {
-              bottom: 64 + Math.max(insets.bottom, spacing.stackSm),
               paddingBottom: spacing.stackSm,
               backgroundColor: colors.surfaceContainerLowest,
               borderTopColor: colors.outlineVariant,
@@ -362,6 +435,13 @@ export function StudentDetailScreen({ navigation, route }: Props) {
       <ExercisePickerModal
         visible={pickerIndex != null}
         exercises={exercises}
+        muscleGroup={
+          pickerIndex == null
+            ? null
+            : getValues(`days.${dayIndex}.workouts.${pickerIndex}.muscle_group`) ||
+              templateMuscle ||
+              null
+        }
         selectedId={selectedExerciseId}
         onClose={() => setPickerIndex(null)}
         onSelect={(exercise) => {
@@ -374,14 +454,41 @@ export function StudentDetailScreen({ navigation, route }: Props) {
               shouldDirty: true,
             });
           }
-          if (exercise.is_cardio) {
-            setValue(`days.${dayIndex}.workouts.${pickerIndex}.is_cardio`, true, {
-              shouldDirty: true,
-            });
-          }
           setPickerIndex(null);
         }}
       />
+      <FoodPickerModal
+        visible={foodPicker != null}
+        foods={foods}
+        mealType={
+          foodPicker
+            ? getValues(`days.${dayIndex}.meals.${foodPicker.mealIndex}.meal_type`)
+            : null
+        }
+        selectedId={
+          foodPicker
+            ? getValues(
+                `days.${dayIndex}.meals.${foodPicker.mealIndex}.foods.${foodPicker.foodIndex}.food_id`,
+              )
+            : null
+        }
+        onClose={() => setFoodPicker(null)}
+        onSelect={(food) => {
+          if (!foodPicker) return;
+          setValue(
+            `days.${dayIndex}.meals.${foodPicker.mealIndex}.foods.${foodPicker.foodIndex}.food_id`,
+            food.id,
+            { shouldDirty: true },
+          );
+          setValue(
+            `days.${dayIndex}.meals.${foodPicker.mealIndex}.foods.${foodPicker.foodIndex}.food_name`,
+            food.name,
+            { shouldDirty: true },
+          );
+          setFoodPicker(null);
+        }}
+      />
+      {sheet}
     </View>
   );
 }
@@ -419,8 +526,9 @@ const styles = StyleSheet.create({
   },
   days: { gap: 8, paddingVertical: 4 },
   dayChip: {
-    width: 44,
-    height: 40,
+    minWidth: 58,
+    height: 48,
+    paddingHorizontal: 8,
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',

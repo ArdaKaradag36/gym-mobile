@@ -20,7 +20,7 @@ function applyParsed(parsed: Record<string, unknown>): MeasurementFormValues {
 
 export async function parseTanitaPdf(base64: string): Promise<MeasurementFormValues> {
   if (!isSupabaseConfigured) {
-    throw new Error('Supabase is not configured.');
+    throw new Error('Supabase ayarlı değil.');
   }
 
   const { data, error } = await supabase.functions.invoke('parse-tanita-pdf', {
@@ -28,12 +28,12 @@ export async function parseTanitaPdf(base64: string): Promise<MeasurementFormVal
   });
 
   if (error) {
-    throw new Error(error.message || 'PDF parse failed.');
+    throw new Error(error.message || 'PDF okunamadı.');
   }
 
   const payload = data as { success?: boolean; error?: string; fields?: Record<string, unknown> } | null;
   if (!payload?.success || !payload.fields) {
-    throw new Error(payload?.error ?? 'Could not read measurement fields from the PDF.');
+    throw new Error(payload?.error ?? 'PDF’den ölçüm alanları okunamadı.');
   }
 
   return applyParsed(payload.fields);
