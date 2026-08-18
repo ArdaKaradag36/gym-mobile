@@ -1,9 +1,9 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import {
-  FlatList,
-  Modal,
+  Dimensions,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -66,6 +66,7 @@ export function ExercisePickerModal({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
+  const sheetHeight = Math.min(Math.round(Dimensions.get('window').height * 0.72), 640);
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -77,60 +78,63 @@ export function ExercisePickerModal({
     );
   }, [exercises, query]);
 
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+    <View style={styles.overlay} pointerEvents="box-none">
+      <Pressable style={styles.backdrop} onPress={onClose} />
+      <View
+        style={[
+          styles.sheet,
+          {
+            height: sheetHeight,
+            backgroundColor: colors.surfaceContainerLow,
+            borderColor: colors.outlineVariant,
+            paddingBottom: insets.bottom + spacing.stackMd,
+          },
+        ]}
+      >
+        <View style={styles.sheetHeader}>
+          <Text style={[styles.sheetTitle, { color: colors.onSurface }]}>Egzersiz kütüphanesi</Text>
+          <Pressable onPress={onClose} hitSlop={8}>
+            <MaterialIcons name="close" size={22} color={colors.onSurfaceVariant} />
+          </Pressable>
+        </View>
+
         <View
           style={[
-            styles.sheet,
+            styles.search,
             {
-              backgroundColor: colors.surfaceContainerLow,
-              borderColor: colors.outlineVariant,
-              paddingBottom: insets.bottom + spacing.stackMd,
+              backgroundColor: colors.surfaceContainerLowest,
+              borderColor: colors.electricBlue,
             },
           ]}
         >
-          <View style={styles.sheetHeader}>
-            <Text style={[styles.sheetTitle, { color: colors.onSurface }]}>Egzersiz kütüphanesi</Text>
-            <Pressable onPress={onClose} hitSlop={8}>
-              <MaterialIcons name="close" size={22} color={colors.onSurfaceVariant} />
-            </Pressable>
-          </View>
+          <MaterialIcons name="search" size={18} color={colors.onSurfaceVariant} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Egzersiz ara…"
+            placeholderTextColor={colors.outline}
+            style={[styles.searchInput, { color: colors.onSurface }]}
+          />
+        </View>
 
-          <View
-            style={[
-              styles.search,
-              {
-                backgroundColor: colors.surfaceContainerLowest,
-                borderColor: colors.electricBlue,
-              },
-            ]}
-          >
-            <MaterialIcons name="search" size={18} color={colors.onSurfaceVariant} />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Egzersiz ara…"
-              placeholderTextColor={colors.outline}
-              style={[styles.searchInput, { color: colors.onSurface }]}
-            />
-          </View>
-
-          <FlatList
-            data={filtered}
-            keyExtractor={(item) => item.id}
-            keyboardShouldPersistTaps="handled"
-            style={styles.listFlex}
-            contentContainerStyle={styles.list}
-            ListEmptyComponent={
-              <Text style={[styles.empty, { color: colors.onSurfaceVariant }]}>
-                Aktif egzersiz bulunamadı.
-              </Text>
-            }
-            renderItem={({ item }) => {
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          style={styles.listFlex}
+          contentContainerStyle={styles.list}
+        >
+          {filtered.length === 0 ? (
+            <Text style={[styles.empty, { color: colors.onSurfaceVariant }]}>
+              Aktif egzersiz bulunamadı.
+            </Text>
+          ) : (
+            filtered.map((item) => {
               const isSelected = selectedId === item.id;
               return (
                 <Pressable
+                  key={item.id}
                   onPress={() => {
                     onSelect({ ...item, youtube_url: exerciseVideoUrl(item.youtube_url) });
                     setQuery('');
@@ -157,15 +161,15 @@ export function ExercisePickerModal({
                   ) : null}
                 </Pressable>
               );
-            }}
-          />
-        </View>
+            })
+          )}
+        </ScrollView>
       </View>
-    </Modal>
+    </View>
   );
 }
 
-/** Template editor gibi tek satırlı yerler için: tek modal, parent state yoksa lokal. */
+/** Template editor gibi tek satırlı yerler için: tek overlay, parent state yoksa lokal. */
 export function ExercisePicker({
   exercises,
   selected,
@@ -214,14 +218,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 16,
   },
-  backdrop: {
-    flex: 1,
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 40,
     justifyContent: 'flex-end',
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
   sheet: {
-    height: '80%',
-    maxHeight: '80%',
+    zIndex: 41,
     overflow: 'hidden',
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,

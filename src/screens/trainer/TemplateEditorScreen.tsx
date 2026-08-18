@@ -406,7 +406,7 @@ function EditorHeader({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, position: 'relative' },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',

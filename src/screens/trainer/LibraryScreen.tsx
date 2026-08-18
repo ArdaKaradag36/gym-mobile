@@ -3,10 +3,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Linking,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -25,7 +25,7 @@ import {
   fetchWorkoutTemplates,
 } from '../../services/templates';
 import { useAuthStore } from '../../stores/useAuthStore';
-import type { DietTemplate, WorkoutTemplate } from '../../types/database';
+import type { DietTemplate, Exercise, WorkoutTemplate } from '../../types/database';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 
@@ -72,6 +72,9 @@ export function LibraryScreen({ navigation }: Props) {
     );
   }, [exercises, query]);
 
+  const refreshing = tab === 'exercises' ? exercisesLoading : templatesLoading;
+  const onRefresh = tab === 'exercises' ? refresh : loadTemplates;
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <TrainerTopNavbar trainerName={trainerName} />
@@ -88,71 +91,28 @@ export function LibraryScreen({ navigation }: Props) {
         />
       </View>
 
-      {tab === 'exercises' ? (
-        <FlatList
-          data={filteredExercises}
-          keyExtractor={(item) => item.id}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl refreshing={exercisesLoading} onRefresh={() => void refresh()} tintColor={colors.neonGreen} />
-          }
-          ListHeaderComponent={
-            <View
-              style={[
-                styles.search,
-                { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant },
-              ]}
-            >
-              <MaterialIcons name="search" size={18} color={colors.onSurfaceVariant} />
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Egzersiz ara…"
-                placeholderTextColor={colors.outline}
-                style={[styles.searchInput, { color: colors.onSurface }]}
-              />
-            </View>
-          }
-          ListEmptyComponent={
-            exercisesLoading ? (
-              <ActivityIndicator color={colors.neonGreen} />
-            ) : (
-              <Text style={{ color: colors.onSurfaceVariant }}>{exercisesError ?? 'Egzersiz yok.'}</Text>
-            )
-          }
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.card,
-                { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outlineVariant },
-              ]}
-            >
-              <Pressable
-                accessibilityLabel="Video"
-                onLongPress={() => void Linking.openURL(exerciseVideoUrl(item.youtube_url))}
-                onPress={() => void Linking.openURL(exerciseVideoUrl(item.youtube_url))}
-                style={styles.hiddenVideo}
-              >
-                <MaterialIcons name="play-circle-outline" size={18} color={colors.outline} />
-              </Pressable>
-              <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.name}</Text>
-              <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular', fontSize: 12 }}>
-                {muscleGroupLabel(item.category) || (item.is_cardio ? 'Kardiyo' : '—')}
-              </Text>
-            </View>
-          )}
-        />
-      ) : tab === 'workouts' ? (
-        <FlatList
-          data={workoutTemplates}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl refreshing={templatesLoading} onRefresh={() => void loadTemplates()} tintColor={colors.neonGreen} />
-          }
-          ListHeaderComponent={
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void onRefresh()}
+            tintColor={colors.neonGreen}
+          />
+        }
+      >
+        {tab === 'exercises' ? (
+          <ExercisesGrid
+            exercises={filteredExercises}
+            query={query}
+            onQueryChange={setQuery}
+            loading={exercisesLoading}
+            error={exercisesError}
+          />
+        ) : null}
+
+        {tab === 'workouts' ? (
+          <>
             <Pressable
               onPress={() => navigation.navigate('TemplateEditor', { kind: 'workout' })}
               style={[styles.create, { borderColor: colors.neonGreenBorder }]}
@@ -162,40 +122,36 @@ export function LibraryScreen({ navigation }: Props) {
                 Antrenman şablonu
               </Text>
             </Pressable>
-          }
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.templateCard,
-                { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outlineVariant },
-              ]}
-            >
-              <Pressable
-                style={{ flex: 1 }}
-                onPress={() =>
-                  navigation.navigate('TemplateEditor', { kind: 'workout', templateId: item.id })
-                }
+            {workoutTemplates.map((item) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.templateCard,
+                  { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outlineVariant },
+                ]}
               >
-                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.name}</Text>
-                <Text style={{ color: colors.onSurfaceVariant }}>
-                  {muscleGroupLabel(item.muscle_group)} · {item.workout_template_items?.length ?? 0} hareket
-                </Text>
-              </Pressable>
-              <Pressable onPress={() => void deleteWorkoutTemplate(item.id).then(loadTemplates)}>
-                <MaterialIcons name="delete" size={20} color={colors.error} />
-              </Pressable>
-            </View>
-          )}
-        />
-      ) : (
-        <FlatList
-          data={dietTemplates}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.content}
-          refreshControl={
-            <RefreshControl refreshing={templatesLoading} onRefresh={() => void loadTemplates()} tintColor={colors.neonGreen} />
-          }
-          ListHeaderComponent={
+                <Pressable
+                  style={styles.templateBody}
+                  onPress={() =>
+                    navigation.navigate('TemplateEditor', { kind: 'workout', templateId: item.id })
+                  }
+                >
+                  <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.name}</Text>
+                  <Text style={{ color: colors.onSurfaceVariant }}>
+                    {muscleGroupLabel(item.muscle_group)} · {item.workout_template_items?.length ?? 0}{' '}
+                    hareket
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => void deleteWorkoutTemplate(item.id).then(loadTemplates)}>
+                  <MaterialIcons name="delete" size={20} color={colors.error} />
+                </Pressable>
+              </View>
+            ))}
+          </>
+        ) : null}
+
+        {tab === 'diets' ? (
+          <>
             <Pressable
               onPress={() => navigation.navigate('TemplateEditor', { kind: 'diet' })}
               style={[styles.create, { borderColor: colors.neonGreenBorder }]}
@@ -205,33 +161,99 @@ export function LibraryScreen({ navigation }: Props) {
                 Diyet şablonu
               </Text>
             </Pressable>
-          }
-          renderItem={({ item }) => (
-            <View
-              style={[
-                styles.templateCard,
-                { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outlineVariant },
-              ]}
-            >
-              <Pressable
-                style={{ flex: 1 }}
-                onPress={() =>
-                  navigation.navigate('TemplateEditor', { kind: 'diet', templateId: item.id })
-                }
+            {dietTemplates.map((item) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.templateCard,
+                  { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outlineVariant },
+                ]}
               >
-                <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.name}</Text>
-                <Text style={{ color: colors.onSurfaceVariant }}>
-                  {item.diet_template_meals?.length ?? 0} öğün
-                </Text>
-              </Pressable>
-              <Pressable onPress={() => void deleteDietTemplate(item.id).then(loadTemplates)}>
-                <MaterialIcons name="delete" size={20} color={colors.error} />
-              </Pressable>
-            </View>
-          )}
-        />
-      )}
+                <Pressable
+                  style={styles.templateBody}
+                  onPress={() =>
+                    navigation.navigate('TemplateEditor', { kind: 'diet', templateId: item.id })
+                  }
+                >
+                  <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.name}</Text>
+                  <Text style={{ color: colors.onSurfaceVariant }}>
+                    {item.diet_template_meals?.length ?? 0} öğün
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => void deleteDietTemplate(item.id).then(loadTemplates)}>
+                  <MaterialIcons name="delete" size={20} color={colors.error} />
+                </Pressable>
+              </View>
+            ))}
+          </>
+        ) : null}
+      </ScrollView>
     </View>
+  );
+}
+
+function ExercisesGrid({
+  exercises,
+  query,
+  onQueryChange,
+  loading,
+  error,
+}: {
+  exercises: Exercise[];
+  query: string;
+  onQueryChange: (value: string) => void;
+  loading: boolean;
+  error: string | null;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <>
+      <View
+        style={[
+          styles.search,
+          { backgroundColor: colors.surfaceContainerLowest, borderColor: colors.outlineVariant },
+        ]}
+      >
+        <MaterialIcons name="search" size={18} color={colors.onSurfaceVariant} />
+        <TextInput
+          value={query}
+          onChangeText={onQueryChange}
+          placeholder="Egzersiz ara…"
+          placeholderTextColor={colors.outline}
+          style={[styles.searchInput, { color: colors.onSurface }]}
+        />
+      </View>
+
+      {loading && exercises.length === 0 ? <ActivityIndicator color={colors.neonGreen} /> : null}
+      {!loading && exercises.length === 0 ? (
+        <Text style={{ color: colors.onSurfaceVariant }}>{error ?? 'Egzersiz yok.'}</Text>
+      ) : null}
+
+      <View style={styles.grid}>
+        {exercises.map((item) => (
+          <View
+            key={item.id}
+            style={[
+              styles.card,
+              { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outlineVariant },
+            ]}
+          >
+            <Pressable
+              accessibilityLabel="Video"
+              onPress={() => void Linking.openURL(exerciseVideoUrl(item.youtube_url))}
+              style={styles.hiddenVideo}
+            >
+              <MaterialIcons name="play-circle-outline" size={18} color={colors.outline} />
+            </Pressable>
+            <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.name}</Text>
+            <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular', fontSize: 12 }}>
+              {muscleGroupLabel(item.category) || (item.is_cardio ? 'Kardiyo' : '—')}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </>
   );
 }
 
@@ -257,18 +279,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: spacing.stackSm,
   },
   searchInput: { flex: 1, fontFamily: 'Inter_400Regular' },
-  row: { gap: spacing.gutterCard },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.gutterCard,
+  },
   card: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: 140,
+    maxWidth: '48%',
     position: 'relative',
     overflow: 'hidden',
     borderRadius: radii.lg,
     borderWidth: 1,
     padding: 12,
-    marginBottom: spacing.gutterCard,
     gap: 4,
   },
   hiddenVideo: {
@@ -295,5 +321,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  templateBody: {
+    flex: 1,
   },
 });

@@ -387,7 +387,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, position: 'relative' },
   topBar: {
     paddingHorizontal: spacing.marginPage,
     paddingBottom: spacing.stackMd,
