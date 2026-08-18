@@ -10,7 +10,7 @@ import {
 import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -53,8 +53,14 @@ export default function App() {
   const [montserratLoaded] = useMontserratFonts({
     Montserrat_700Bold,
   });
+  const [fontWaitTimedOut, setFontWaitTimedOut] = useState(false);
 
-  const fontsReady = interLoaded && montserratLoaded;
+  useEffect(() => {
+    const timer = setTimeout(() => setFontWaitTimedOut(true), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const fontsReady = (interLoaded && montserratLoaded) || fontWaitTimedOut;
 
   useEffect(() => {
     if (fontsReady) {

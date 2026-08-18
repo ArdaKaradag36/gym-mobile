@@ -36,11 +36,14 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "ELECTRON_DISABLE_SANDBOX=1 expo start",
-    "android": "ELECTRON_DISABLE_SANDBOX=1 expo start --android",
-    "ios": "ELECTRON_DISABLE_SANDBOX=1 expo start --ios",
-    "web": "ELECTRON_DISABLE_SANDBOX=1 expo start --web",
+    "start": "node scripts/start.mjs",
+    "android": "node scripts/start.mjs --android",
+    "ios": "node scripts/start.mjs --ios",
+    "web": "node scripts/start.mjs --web",
     "create-user": "node scripts/create-user.mjs"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "private": true
 }

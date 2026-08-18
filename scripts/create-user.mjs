@@ -78,6 +78,8 @@ const admin = createClient(url, serviceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
+let userId = null;
+
 const { data: created, error: createError } = await admin.auth.admin.createUser({
   email,
   password,
@@ -86,11 +88,36 @@ const { data: created, error: createError } = await admin.auth.admin.createUser(
   user_metadata: { full_name: fullName, role },
 });
 
-if (createError || !created.user) {
-  fail(createError?.message ?? 'Auth kullanıcısı oluşturulamadı.');
-}
+if (createError) {
+  const alreadyExists = /already been registered|already exists|email_exists/i.test(
+    createError.message,
+  );
+  if (!alreadyExists) {
+    fail(createError.message);
+  }
 
-const userId = created.user.id;
+  const { data: usersPage, error: listError } = await admin.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+  if (listError) fail(`Kullanıcı listelenemedi: ${listError.message}`);
+  const existing = usersPage.users.find((user) => user.email === email);
+  if (!existing) fail(`Kullanıcı zaten var ama listede bulunamadı: ${email}`);
+
+  const { error: updateError } = await admin.auth.admin.updateUserById(existing.id, {
+    password,
+    email_confirm: true,
+    app_metadata: { role },
+    user_metadata: { full_name: fullName, role },
+  });
+  if (updateError) fail(`Mevcut kullanıcı güncellenemedi: ${updateError.message}`);
+  userId = existing.id;
+  console.log(`Mevcut kullanıcı güncellendi: ${email}`);
+} else if (!created.user) {
+  fail('Auth kullanıcısı oluşturulamadı.');
+} else {
+  userId = created.user.id;
+}
 let trainerId = null;
 
 if (role === 'student' && trainerEmail) {
