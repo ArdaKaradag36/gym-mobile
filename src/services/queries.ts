@@ -1,0 +1,105 @@
+export const PROFILE_COLUMNS =
+  'id, role, full_name, trainer_id, is_active, avatar_url';
+
+export const PROGRAM_COLUMNS = `
+  id,
+  student_id,
+  trainer_id,
+  start_date,
+  end_date,
+  title,
+  status,
+  start_weight,
+  target_weight,
+  kcal_target,
+  protein_g,
+  carb_g,
+  fat_g,
+  protein_g_off,
+  carb_g_off,
+  fat_g_off,
+  trainer_notes
+`;
+
+export const PLAN_EMBED = `
+  id,
+  program_id,
+  date,
+  water_goal,
+  water_consumed,
+  daily_note,
+  workout_title,
+  is_rest_day,
+  is_training_day,
+  steps_count,
+  daily_workouts (
+    id,
+    daily_plan_id,
+    exercise_id,
+    order_index,
+    target_sets,
+    target_reps,
+    reps_scheme,
+    rest_seconds,
+    muscle_group,
+    is_cardio,
+    cardio_params,
+    weight_min,
+    weight_max,
+    actual_weight_used,
+    student_note,
+    is_completed,
+    exercises ( id, name, category, youtube_url, is_cardio )
+  ),
+  daily_diets (
+    id,
+    daily_plan_id,
+    meal_type,
+    content,
+    is_completed,
+    diet_foods (
+      id,
+      daily_diet_id,
+      food_name,
+      amount,
+      note,
+      training_day_only,
+      order_index
+    )
+  )
+`;
+
+export const MEASUREMENT_COLUMNS = `
+  id,
+  student_id,
+  date,
+  measured_at,
+  device,
+  weight,
+  weight_ideal,
+  body_fat,
+  body_density,
+  bmi,
+  bmi_ideal,
+  muscle_kg,
+  muscle_kg_ideal,
+  mineral,
+  mineral_ideal,
+  protein,
+  protein_ideal,
+  fluid_kg,
+  fluid_kg_ideal,
+  fat_mass_kg,
+  fat_mass_kg_ideal,
+  body_fat_percent,
+  body_fat_percent_ideal,
+  bmi_score,
+  muscle_score,
+  fluid_score,
+  bmr_score,
+  fat_score,
+  metabolic_age,
+  fat_free_mass_kg,
+  source,
+  raw_payload
+`;

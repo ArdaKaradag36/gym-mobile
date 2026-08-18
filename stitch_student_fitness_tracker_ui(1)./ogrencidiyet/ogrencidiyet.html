@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Diet &amp; Water Tracker</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&amp;family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#4b8eff",
+                        "primary-fixed-dim": "#abd600",
+                        "error-container": "#93000a",
+                        "surface-container": "#201f1f",
+                        "on-primary-fixed-variant": "#3c4d00",
+                        "on-background": "#e5e2e1",
+                        "surface-bright": "#3a3939",
+                        "on-tertiary": "#313030",
+                        "surface-container-low": "#1c1b1b",
+                        "outline": "#8e9379",
+                        "on-tertiary-container": "#656464",
+                        "tertiary-fixed-dim": "#c8c6c5",
+                        "on-secondary-container": "#00285c",
+                        "on-surface-variant": "#c4c9ac",
+                        "surface-dim": "#131313",
+                        "on-error": "#690005",
+                        "on-secondary-fixed": "#001a41",
+                        "surface-variant": "#353534",
+                        "on-secondary-fixed-variant": "#004493",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "inverse-primary": "#506600",
+                        "on-secondary": "#002e69",
+                        "inverse-on-surface": "#313030",
+                        "surface-container-highest": "#353534",
+                        "surface-tint": "#abd600",
+                        "inverse-surface": "#e5e2e1",
+                        "primary-container": "#c3f400",
+                        "outline-variant": "#444933",
+                        "error": "#ffb4ab",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-tertiary-fixed": "#1c1b1b",
+                        "background": "#131313",
+                        "surface": "#131313",
+                        "on-surface": "#e5e2e1",
+                        "primary-fixed": "#c3f400",
+                        "tertiary-fixed": "#e5e2e1",
+                        "secondary": "#adc6ff",
+                        "on-error-container": "#ffdad6",
+                        "primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#474746",
+                        "on-primary-container": "#556d00",
+                        "secondary-fixed": "#d8e2ff",
+                        "tertiary-container": "#e5e2e1",
+                        "on-primary": "#283500",
+                        "on-primary-fixed": "#161e00",
+                        "surface-container-high": "#2a2a2a",
+                        "tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "stack-sm": "8px",
+                        "margin-page": "20px",
+                        "gutter-card": "12px",
+                        "stack-lg": "24px",
+                        "stack-md": "16px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Montserrat"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Montserrat"],
+                        "headline-lg": ["Montserrat"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-1px", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen pb-32 pt-20 flex flex-col font-body-md">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background/60 backdrop-blur-xl border-b border-outline-variant/10 flex justify-between items-center px-margin-page h-16 w-full text-primary-fixed font-display-lg text-display-lg font-bold flat no shadows">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A macro shot of a sleek, futuristic avatar icon with a dark charcoal background and subtle neon green glowing edge. The style is highly detailed, evoking a premium digital dashboard aesthetic. High contrast, sharp focus, 8k resolution, minimalist." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIyPtFI9neKVT-70f_YsG84lHRuYMDeZwrbv5bHlL4oD0uR1ULLdWQEmDwmNemYsrNh0358O2sxGmwopUo3dwsJo69_dx4Dpq4dkSmapenmS6Fg4V4RBB35JMvsqRR-IgCtAqq10l9GM-IPDSCZVMLqoFKvfQZfWEj2P8qVBFw95pwwEsBFCqON26uKsjZX8oxxJJBmjNTP5eiJwYQ6dqbAj40EXxfAFK01Gq2fXtM5zXM0wIR8ABb"/>
+</div>
+<span class="font-display-lg text-headline-lg-mobile font-bold tracking-tighter text-primary-fixed">FORGE</span>
+</div>
+<button class="text-primary-fixed hover:opacity-80 transition-opacity active:scale-95 transition-transform flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</header>
+<main class="px-margin-page flex-1 flex flex-col gap-stack-lg max-w-md mx-auto w-full pt-stack-lg">
+<!-- Daily Meals -->
+<section class="flex flex-col gap-stack-sm">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-2">Today's Fuel</h2>
+<div class="bg-surface-container-low border border-surface-container-high rounded-xl p-stack-md flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-secondary-container">
+<span class="material-symbols-outlined" data-icon="light_mode">light_mode</span>
+</div>
+<div>
+<h3 class="font-headline-lg-mobile text-[16px] text-on-surface leading-tight">Breakfast</h3>
+<p class="font-body-md text-[14px] text-on-surface-variant">Oats &amp; Protein</p>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full border border-primary-fixed/30 flex items-center justify-center text-primary-fixed hover:bg-primary-fixed/10 transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="check">check</span>
+</button>
+</div>
+<div class="bg-surface-container-low border border-surface-container-high rounded-xl p-stack-md flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-secondary-container">
+<span class="material-symbols-outlined" data-icon="sunny">sunny</span>
+</div>
+<div>
+<h3 class="font-headline-lg-mobile text-[16px] text-on-surface leading-tight">Lunch</h3>
+<p class="font-body-md text-[14px] text-on-surface-variant">Chicken Rice Bowl</p>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center text-outline-variant hover:border-primary-fixed hover:text-primary-fixed transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+</button>
+</div>
+<div class="bg-surface-container-low border border-surface-container-high rounded-xl p-stack-md flex items-center justify-between opacity-50">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-secondary-container">
+<span class="material-symbols-outlined" data-icon="dark_mode">dark_mode</span>
+</div>
+<div>
+<h3 class="font-headline-lg-mobile text-[16px] text-on-surface leading-tight">Dinner</h3>
+<p class="font-body-md text-[14px] text-on-surface-variant">Planned: Salmon</p>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center text-outline-variant">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+</button>
+</div>
+</section>
+<!-- Water Tracker -->
+<section class="bg-surface-container-low border border-surface-container-high rounded-xl p-stack-lg flex flex-col items-center gap-stack-md">
+<div class="flex items-center gap-2 text-secondary-container">
+<span class="material-symbols-outlined text-3xl" data-icon="water_drop">water_drop</span>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile">Hydration</h2>
+</div>
+<div class="relative w-40 h-40 flex items-center justify-center">
+<svg class="absolute inset-0 w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<circle cx="50" cy="50" fill="none" r="45" stroke="#2a2a2a" stroke-width="4"></circle>
+<circle class="transition-all duration-1000 ease-out" cx="50" cy="50" fill="none" r="45" stroke="#4b8eff" stroke-dasharray="283" stroke-dashoffset="141.5" stroke-width="6"></circle>
+</svg>
+<div class="text-center z-10 flex flex-col items-center">
+<span class="font-display-lg text-headline-lg text-primary-fixed">1.5L</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">/ 3.0L</span>
+</div>
+</div>
+<button class="mt-4 w-14 h-14 rounded-full bg-secondary-container/10 border border-secondary-container/30 text-secondary-container flex items-center justify-center hover:bg-secondary-container/20 hover:border-secondary-container transition-all active:scale-95 group shadow-[0_0_15px_rgba(75,142,255,0.1)]">
+<span class="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform" data-icon="add">add</span>
+</button>
+</section>
+<!-- Notes -->
+<section class="flex flex-col gap-stack-sm mb-4">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider" for="notes">Günlük Notlar/İtiraf</label>
+<textarea class="w-full bg-surface-container border border-surface-container-high rounded-lg p-stack-md font-body-md text-on-surface focus:border-secondary-container focus:ring-1 focus:ring-secondary-container focus:outline-none transition-colors resize-none placeholder-on-surface-variant/50" id="notes" placeholder="Ate a cookie..." rows="3"></textarea>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 pb-8 bg-surface-container-lowest/80 backdrop-blur-xl rounded-t-xl border-t border-outline-variant/20 z-50 md:hidden flat no shadows text-primary-fixed font-label-sm text-label-sm font-display-lg">
+<button class="flex flex-col items-center justify-center text-primary-fixed bg-primary-fixed/10 rounded-full py-1 px-4 hover:text-primary-fixed-dim active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="restaurant" data-weight="fill" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+<span>Diet</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-fixed-dim active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="fitness_center">fitness_center</span>
+<span>Workouts</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-fixed-dim active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+<span>Metrics</span>
+</button>
+</nav>
+</body></html>

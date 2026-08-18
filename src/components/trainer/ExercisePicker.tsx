@@ -1,0 +1,285 @@
+import { MaterialIcons } from '@expo/vector-icons';
+import { useMemo, useState } from 'react';
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { exerciseVideoUrl } from '../../constants/media';
+import type { Exercise } from '../../types/database';
+import { radii, spacing } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
+
+type ButtonProps = {
+  selected: Exercise | null;
+  onPress: () => void;
+  loading?: boolean;
+};
+
+export function ExercisePickerButton({ selected, onPress, loading = false }: ButtonProps) {
+  const { colors } = useTheme();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.trigger,
+        {
+          backgroundColor: colors.surfaceContainerLowest,
+          borderColor: pressed ? colors.electricBlue : colors.outlineVariant,
+        },
+      ]}
+    >
+      <MaterialIcons name="fitness-center" size={20} color={colors.onSurfaceVariant} />
+      <View style={styles.triggerText}>
+        <Text style={[styles.triggerLabel, { color: colors.onSurfaceVariant }]}>Egzersiz</Text>
+        <Text style={[styles.triggerValue, { color: colors.onSurface }]} numberOfLines={1}>
+          {selected?.name ?? (loading ? 'Yükleniyor…' : 'Kütüphaneden seç')}
+        </Text>
+      </View>
+      <MaterialIcons name="expand-more" size={22} color={colors.onSurfaceVariant} />
+    </Pressable>
+  );
+}
+
+type ModalProps = {
+  visible: boolean;
+  exercises: Exercise[];
+  selectedId?: string | null;
+  onSelect: (exercise: Exercise) => void;
+  onClose: () => void;
+};
+
+export function ExercisePickerModal({
+  visible,
+  exercises,
+  selectedId,
+  onSelect,
+  onClose,
+}: ModalProps) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const [query, setQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return exercises;
+    return exercises.filter(
+      (item) =>
+        item.name.toLowerCase().includes(normalized) ||
+        item.category?.toLowerCase().includes(normalized),
+    );
+  }, [exercises, query]);
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <View
+          style={[
+            styles.sheet,
+            {
+              backgroundColor: colors.surfaceContainerLow,
+              borderColor: colors.outlineVariant,
+              paddingBottom: insets.bottom + spacing.stackMd,
+            },
+          ]}
+        >
+          <View style={styles.sheetHeader}>
+            <Text style={[styles.sheetTitle, { color: colors.onSurface }]}>Egzersiz kütüphanesi</Text>
+            <Pressable onPress={onClose} hitSlop={8}>
+              <MaterialIcons name="close" size={22} color={colors.onSurfaceVariant} />
+            </Pressable>
+          </View>
+
+          <View
+            style={[
+              styles.search,
+              {
+                backgroundColor: colors.surfaceContainerLowest,
+                borderColor: colors.electricBlue,
+              },
+            ]}
+          >
+            <MaterialIcons name="search" size={18} color={colors.onSurfaceVariant} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Egzersiz ara…"
+              placeholderTextColor={colors.outline}
+              style={[styles.searchInput, { color: colors.onSurface }]}
+            />
+          </View>
+
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            style={styles.listFlex}
+            contentContainerStyle={styles.list}
+            ListEmptyComponent={
+              <Text style={[styles.empty, { color: colors.onSurfaceVariant }]}>
+                Aktif egzersiz bulunamadı.
+              </Text>
+            }
+            renderItem={({ item }) => {
+              const isSelected = selectedId === item.id;
+              return (
+                <Pressable
+                  onPress={() => {
+                    onSelect({ ...item, youtube_url: exerciseVideoUrl(item.youtube_url) });
+                    setQuery('');
+                    onClose();
+                  }}
+                  style={[
+                    styles.option,
+                    {
+                      backgroundColor: isSelected
+                        ? colors.neonGreenMuted
+                        : colors.surfaceContainerHigh,
+                      borderColor: isSelected ? colors.neonGreenBorder : colors.outlineVariant,
+                    },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.optionName, { color: colors.onSurface }]}>{item.name}</Text>
+                    <Text style={[styles.optionMeta, { color: colors.onSurfaceVariant }]}>
+                      {item.category ?? 'Genel'}
+                    </Text>
+                  </View>
+                  {isSelected ? (
+                    <MaterialIcons name="check" size={20} color={colors.neonGreen} />
+                  ) : null}
+                </Pressable>
+              );
+            }}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+/** Template editor gibi tek satırlı yerler için: tek modal, parent state yoksa lokal. */
+export function ExercisePicker({
+  exercises,
+  selected,
+  onSelect,
+  loading = false,
+}: {
+  exercises: Exercise[];
+  selected: Exercise | null;
+  onSelect: (exercise: Exercise) => void;
+  loading?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <ExercisePickerButton selected={selected} onPress={() => setOpen(true)} loading={loading} />
+      <ExercisePickerModal
+        visible={open}
+        exercises={exercises}
+        selectedId={selected?.id}
+        onSelect={onSelect}
+        onClose={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  trigger: {
+    minHeight: 56,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    paddingHorizontal: spacing.stackMd,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  triggerText: {
+    flex: 1,
+    gap: 2,
+  },
+  triggerLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+  },
+  triggerValue: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 16,
+  },
+  backdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  sheet: {
+    height: '80%',
+    maxHeight: '80%',
+    overflow: 'hidden',
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    borderWidth: 1,
+    padding: spacing.stackMd,
+    gap: spacing.stackMd,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sheetTitle: {
+    fontFamily: 'Montserrat_700Bold',
+    fontSize: 20,
+  },
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: radii.full,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+  },
+  listFlex: {
+    flex: 1,
+  },
+  list: {
+    gap: 8,
+    paddingBottom: spacing.stackMd,
+  },
+  option: {
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    padding: spacing.stackMd,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  optionName: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+  },
+  optionMeta: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  empty: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: spacing.stackLg,
+  },
+});

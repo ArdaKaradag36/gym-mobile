@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hoca Dashboard - Student Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&amp;family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#abd600",
+                    "tertiary": "#ffffff",
+                    "on-secondary-container": "#00285c",
+                    "inverse-surface": "#e5e2e1",
+                    "on-tertiary-fixed": "#1c1b1b",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "primary-fixed": "#c3f400",
+                    "secondary-container": "#4b8eff",
+                    "on-secondary-fixed": "#001a41",
+                    "on-primary": "#283500",
+                    "on-secondary": "#002e69",
+                    "background": "#131313",
+                    "surface-variant": "#353534",
+                    "primary": "#ffffff",
+                    "outline-variant": "#444933",
+                    "secondary": "#adc6ff",
+                    "surface-bright": "#3a3939",
+                    "on-error-container": "#ffdad6",
+                    "on-primary-fixed-variant": "#3c4d00",
+                    "primary-container": "#c3f400",
+                    "surface-dim": "#131313",
+                    "secondary-fixed": "#d8e2ff",
+                    "surface-container-lowest": "#0e0e0e",
+                    "error-container": "#93000a",
+                    "on-secondary-fixed-variant": "#004493",
+                    "surface-container-high": "#2a2a2a",
+                    "on-tertiary": "#313030",
+                    "inverse-on-surface": "#313030",
+                    "on-error": "#690005",
+                    "surface-container-low": "#1c1b1b",
+                    "primary-fixed-dim": "#abd600",
+                    "on-tertiary-container": "#656464",
+                    "surface-container": "#201f1f",
+                    "on-surface": "#e5e2e1",
+                    "on-background": "#e5e2e1",
+                    "inverse-primary": "#506600",
+                    "on-primary-container": "#556d00",
+                    "on-surface-variant": "#c4c9ac",
+                    "tertiary-fixed-dim": "#c8c6c5",
+                    "tertiary-container": "#e5e2e1",
+                    "error": "#ffb4ab",
+                    "on-primary-fixed": "#161e00",
+                    "surface": "#131313",
+                    "on-tertiary-fixed-variant": "#474746",
+                    "outline": "#8e9379",
+                    "tertiary-fixed": "#e5e2e1",
+                    "surface-container-highest": "#353534"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter-card": "12px",
+                    "stack-md": "16px",
+                    "stack-sm": "8px",
+                    "stack-lg": "24px",
+                    "margin-page": "20px",
+                    "unit": "4px"
+            },
+            "fontFamily": {
+                    "display-lg": [
+                            "Montserrat"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "headline-lg": [
+                            "Montserrat"
+                    ],
+                    "headline-lg-mobile": [
+                            "Montserrat"
+                    ]
+            },
+            "fontSize": {
+                    "display-lg": [
+                            "40px",
+                            {
+                                    "lineHeight": "48px",
+                                    "letterSpacing": "-1px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "20px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "700"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        .glass-panel {
+            background-color: rgba(26, 26, 26, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(171, 214, 0, 0.1);
+        }
+        
+        .input-glow:focus-within {
+            border-color: #4b8eff;
+            box-shadow: 0 0 0 1px #4b8eff;
+        }
+
+        .neon-button {
+            transition: all 0.2s ease;
+        }
+        
+        .neon-button:hover {
+            box-shadow: 0 0 15px rgba(171, 214, 0, 0.4);
+            transform: translateY(-1px);
+        }
+        
+        .neon-button:active {
+            transform: translateY(1px);
+        }
+
+        .tab-indicator {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-safe antialiased selection:bg-surface-tint selection:text-background">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background/60 dark:bg-background/60 backdrop-blur-xl border-b border-surface-variant flex items-center justify-between px-margin-page h-16 w-full md:hidden">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-surface-variant flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A close-up portrait of a fitness trainer looking intensely focused in a dark gym environment. Moody, dramatic lighting with subtle neon accents. The mood is determined and professional. The image should be sharp and high quality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnhhMIZNgXVQt2UNjlnnvsgfJp-hY_fi0KhswSkc6UHilWjB_hrcnFh6ktMFxK7Dh-yurtCgq_CGQOBhyua4OCYIZCiocWL16kR1dmHuXd-wqQeujEpUZmojglIgHfo51txv_Nz2cSQbSQa5mXiHIDKIcK5oota92MhsRKUaWGoSxCc2SZEYct6An_8dIYKTfZHQYrAFMGq2hw6LlgXboAi_fSIWzWGz2fo1G5KSO93fBJYHEgQPLO"/>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary font-display-lg font-bold tracking-tight truncate">Hoca Dashboard</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:opacity-80 transition-opacity active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+</button>
+</header>
+<!-- Desktop Navigation Shell (Hidden on Mobile) -->
+<nav class="hidden md:flex fixed top-0 w-full z-50 bg-background/60 dark:bg-background/60 backdrop-blur-xl flex items-center justify-between px-margin-page h-20 border-b border-surface-variant shadow-sm">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3 mr-8">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-surface-variant flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A close-up portrait of a fitness trainer looking intensely focused in a dark gym environment. Moody, dramatic lighting with subtle neon accents. The mood is determined and professional. The image should be sharp and high quality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkW9pUsuoO-LsULa6XceimZgZBlyIx7HVMDCemiHK9UHzvFosbYue6aT0zsHMdyWNkQOww3KTeVJ_Tiy9f1SPcRT_i9gs70blK5I-zAp3nkhxwvYHqPeuLzq0K5b3BMCfnMxyJ0Jnz07ceN9uWLXkfEf9fzwd46BQcbdcCUdXwkTAMT2J6m4UWaTiKdK-P3Audmt2D6Qh23_8YUI5Q1v246ZLnv0WVs_DpWc8UpPIeerGKV4-xVlKy"/>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-primary font-display-lg font-bold tracking-tight">Hoca Dashboard</h1>
+</div>
+<div class="flex space-x-2">
+<a class="px-4 py-2 rounded-lg font-label-sm text-label-sm text-primary-fixed-dim bg-surface-container relative flex items-center gap-2 group transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">group</span>
+                    Students
+                    <span class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary-fixed-dim rounded-full"></span>
+</a>
+<a class="px-4 py-2 rounded-lg font-label-sm text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container/50 flex items-center gap-2 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">exercise</span>
+                    Library
+                </a>
+<a class="px-4 py-2 rounded-lg font-label-sm text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container/50 flex items-center gap-2 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">dashboard_customize</span>
+                    Templates
+                </a>
+</div>
+</div>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+</button>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-[80px] md:pt-[104px] pb-[100px] px-margin-page max-w-5xl mx-auto flex flex-col gap-stack-lg">
+<!-- Student Header -->
+<section class="flex flex-col md:flex-row md:items-end justify-between gap-stack-md mt-4">
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface border border-surface-variant">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface-variant text-on-surface-variant">Active Plan</span>
+<span class="text-xs text-on-surface-variant">Week 3/12</span>
+</div>
+<h2 class="font-display-lg text-headline-lg-mobile md:text-headline-lg font-bold text-primary tracking-tight">Ahmet Yılmaz</h2>
+</div>
+</div>
+<!-- Contextual Actions -->
+<div class="flex gap-2">
+<button class="px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface border border-surface-variant font-label-sm text-label-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">chat</span>
+                    Mesaj Gönder
+                </button>
+</div>
+</section>
+<!-- Segmented Control (Tabs) -->
+<section class="relative bg-surface-container-lowest p-1 rounded-xl border border-surface-variant flex shadow-sm">
+<!-- Active Indicator Background -->
+<div class="absolute top-1 bottom-1 left-1 w-[calc(33.333%-2.66px)] bg-surface-container border border-surface-variant rounded-lg tab-indicator" style="transform: translateX(0%);"></div>
+<button class="relative z-10 flex-1 py-2.5 text-center font-label-sm text-label-sm text-primary-fixed-dim transition-colors" onclick="document.querySelector('.tab-indicator').style.transform = 'translateX(0%)'">
+                Antrenman
+            </button>
+<button class="relative z-10 flex-1 py-2.5 text-center font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-colors" onclick="document.querySelector('.tab-indicator').style.transform = 'translateX(calc(100% + 4px))'">
+                Diyet
+            </button>
+<button class="relative z-10 flex-1 py-2.5 text-center font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-colors" onclick="document.querySelector('.tab-indicator').style.transform = 'translateX(calc(200% + 8px))'">
+                Ölçümler
+            </button>
+</section>
+<!-- Active Tab Content: Antrenman (Assign Exercise Form) -->
+<section class="glass-panel rounded-xl p-6 flex flex-col gap-stack-lg">
+<div class="flex items-center justify-between border-b border-surface-variant pb-4">
+<div>
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile md:text-headline-lg font-bold text-primary">Yeni Egzersiz Ekle</h3>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm mt-1">Ahmet'in mevcut programına yeni bir hareket tanımlayın.</p>
+</div>
+</div>
+<form class="flex flex-col gap-stack-md" onsubmit="event.preventDefault();">
+<!-- Exercise Name Input -->
+<div class="flex flex-col gap-stack-sm group input-glow">
+<label class="font-label-sm text-label-sm text-on-surface-variant" for="exercise-name">Egzersiz Adı</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant group-focus-within:text-secondary-container transition-colors">fitness_center</span>
+<input class="w-full bg-surface-container-lowest border border-surface-variant rounded-lg py-3 pl-10 pr-4 font-body-md text-body-md text-primary placeholder-on-surface-variant/50 focus:outline-none transition-all" id="exercise-name" placeholder="Örn: Barbell Bench Press" type="text"/>
+</div>
+</div>
+<!-- Sets and Reps Grid -->
+<div class="grid grid-cols-2 gap-gutter-card">
+<!-- Sets -->
+<div class="flex flex-col gap-stack-sm group input-glow">
+<label class="font-label-sm text-label-sm text-on-surface-variant" for="sets">Set Sayısı</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant group-focus-within:text-secondary-container transition-colors">repeat</span>
+<input class="w-full bg-surface-container-lowest border border-surface-variant rounded-lg py-3 pl-10 pr-4 font-body-md text-body-md text-primary placeholder-on-surface-variant/50 focus:outline-none transition-all" id="sets" min="1" placeholder="3" type="number"/>
+</div>
+</div>
+<!-- Reps -->
+<div class="flex flex-col gap-stack-sm group input-glow">
+<label class="font-label-sm text-label-sm text-on-surface-variant" for="reps">Tekrar Aralığı</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant group-focus-within:text-secondary-container transition-colors">tag</span>
+<input class="w-full bg-surface-container-lowest border border-surface-variant rounded-lg py-3 pl-10 pr-4 font-body-md text-body-md text-primary placeholder-on-surface-variant/50 focus:outline-none transition-all" id="reps" placeholder="8-12" type="text"/>
+</div>
+</div>
+</div>
+<!-- Rest Time (Optional detail to enhance the UI) -->
+<div class="flex flex-col gap-stack-sm group input-glow">
+<label class="font-label-sm text-label-sm text-on-surface-variant" for="rest">Dinlenme Süresi (Saniye)</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant group-focus-within:text-secondary-container transition-colors">timer</span>
+<input class="w-full bg-surface-container-lowest border border-surface-variant rounded-lg py-3 pl-10 pr-4 font-body-md text-body-md text-primary placeholder-on-surface-variant/50 focus:outline-none transition-all" id="rest" min="0" placeholder="90" step="15" type="number"/>
+</div>
+</div>
+<!-- YouTube URL -->
+<div class="flex flex-col gap-stack-sm group input-glow pt-2 border-t border-surface-variant mt-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant flex items-center justify-between" for="youtube-url">
+                        Eğitim Videosu Linki
+                        <span class="text-[10px] bg-surface-variant px-2 py-0.5 rounded text-on-surface-variant font-normal">İsteğe Bağlı</span>
+</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant group-focus-within:text-error transition-colors">smart_display</span>
+<input class="w-full bg-surface-container-lowest border border-surface-variant rounded-lg py-3 pl-10 pr-4 font-body-md text-body-md text-primary placeholder-on-surface-variant/50 focus:outline-none transition-all" id="youtube-url" placeholder="https://youtube.com/watch?v=..." type="url"/>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-1 ml-1">Öğrenci antrenman sırasında bu videoyu referans olarak izleyebilir.</p>
+</div>
+<!-- Submit Button -->
+<button class="mt-6 w-full py-4 rounded-xl bg-surface-tint text-on-primary font-label-sm text-label-sm font-bold uppercase tracking-wider flex items-center justify-center gap-2 neon-button" type="submit">
+<span class="material-symbols-outlined text-[18px]">save</span>
+                    Kaydet
+                </button>
+</form>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 pb-safe bg-background/60 dark:bg-background/60 backdrop-blur-xl border-t border-surface-variant flex justify-around items-center h-20 px-margin-page">
+<a class="flex flex-col items-center justify-center text-primary-fixed-dim relative after:content-[''] after:absolute after:-top-2 after:w-1 after:h-1 after:bg-primary-fixed-dim after:rounded-full group" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="font-label-sm text-label-sm">Students</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">exercise</span>
+<span class="font-label-sm text-label-sm">Library</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">dashboard_customize</span>
+<span class="font-label-sm text-label-sm">Templates</span>
+</a>
+</nav>
+</body></html>

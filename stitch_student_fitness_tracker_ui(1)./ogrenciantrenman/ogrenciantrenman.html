@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Student Workout Panel</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Montserrat:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-container": "#4b8eff",
+                        "primary-fixed-dim": "#abd600",
+                        "error-container": "#93000a",
+                        "surface-container": "#201f1f",
+                        "on-primary-fixed-variant": "#3c4d00",
+                        "on-background": "#e5e2e1",
+                        "surface-bright": "#3a3939",
+                        "on-tertiary": "#313030",
+                        "surface-container-low": "#1c1b1b",
+                        "outline": "#8e9379",
+                        "on-tertiary-container": "#656464",
+                        "tertiary-fixed-dim": "#c8c6c5",
+                        "on-secondary-container": "#00285c",
+                        "on-surface-variant": "#c4c9ac",
+                        "surface-dim": "#131313",
+                        "on-error": "#690005",
+                        "on-secondary-fixed": "#001a41",
+                        "surface-variant": "#353534",
+                        "on-secondary-fixed-variant": "#004493",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "inverse-primary": "#506600",
+                        "on-secondary": "#002e69",
+                        "inverse-on-surface": "#313030",
+                        "surface-container-highest": "#353534",
+                        "surface-tint": "#abd600",
+                        "inverse-surface": "#e5e2e1",
+                        "primary-container": "#c3f400",
+                        "outline-variant": "#444933",
+                        "error": "#ffb4ab",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-tertiary-fixed": "#1c1b1b",
+                        "background": "#131313",
+                        "surface": "#131313",
+                        "on-surface": "#e5e2e1",
+                        "primary-fixed": "#c3f400",
+                        "tertiary-fixed": "#e5e2e1",
+                        "secondary": "#adc6ff",
+                        "on-error-container": "#ffdad6",
+                        "primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#474746",
+                        "on-primary-container": "#556d00",
+                        "secondary-fixed": "#d8e2ff",
+                        "tertiary-container": "#e5e2e1",
+                        "on-primary": "#283500",
+                        "on-primary-fixed": "#161e00",
+                        "surface-container-high": "#2a2a2a",
+                        "tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "stack-sm": "8px",
+                        "margin-page": "20px",
+                        "gutter-card": "12px",
+                        "stack-lg": "24px",
+                        "stack-md": "16px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Montserrat"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Montserrat"],
+                        "headline-lg": ["Montserrat"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-1px", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["20px", { "lineHeight": "28px", "fontWeight": "700" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "fontWeight": "700" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c3f400;
+        }
+        
+        .glow-effect {
+            box-shadow: 0 0 10px rgba(195, 244, 0, 0.2);
+        }
+        
+        /* Smooth transitions for interactive elements */
+        .interactive-card {
+            transition: all 0.2s ease-in-out;
+        }
+        .interactive-card:active {
+            transform: scale(0.98);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md antialiased min-h-screen flex flex-col pt-16 pb-24 overflow-x-hidden selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background/60 backdrop-blur-xl border-b border-outline-variant/10 flex justify-between items-center px-margin-page h-16 transition-all duration-300">
+<div class="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high border border-outline-variant/30 flex-shrink-0">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A detailed headshot portrait of a fit young student athlete, dimly lit with moody neon green rim lighting, shot in a modern gym environment, ultra-realistic 8k texture, professional photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuhtMD6VA-ieFbMTKGe8bpbmK0GHWU6ZmUE0SiIs3pc0GIBrMZ0iiKbXm9Q1skBh4RrIlgoioM_cqJEuJM3Mpvds2u5_-XVfj-tWq4KcDKl8biCNTvkPxGy6zk1qNKeASdn1-wQfb9MqdrHYhn5EVabjj3_39DchZELvI6wMgOXk60vEG17dHGHgF0QuT7ruNV5RaNPMh93FK7671vjoH2OFUSzZpU2_PTZW7wVWIU-y_KAj7GTfsO"/>
+</div>
+<span class="font-display-lg text-headline-lg-mobile font-bold tracking-tighter text-primary-fixed">FORGE</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors active:scale-95">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+</button>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 w-full max-w-2xl mx-auto px-margin-page pt-stack-lg pb-stack-lg flex flex-col gap-stack-lg">
+<!-- Workout Header -->
+<section class="flex flex-col gap-unit">
+<h1 class="font-display-lg text-display-lg font-bold text-on-surface tracking-tight">Monday</h1>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary-fixed">Back Day</h2>
+<div class="flex items-center gap-2 mt-2">
+<span class="material-symbols-outlined text-outline text-sm" style="font-variation-settings: 'FILL' 1;">timer</span>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Est. 45 Min</span>
+<div class="w-1 h-1 rounded-full bg-outline-variant mx-2"></div>
+<span class="material-symbols-outlined text-outline text-sm" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">High Intensity</span>
+</div>
+</section>
+<!-- Exercise List -->
+<section class="flex flex-col gap-stack-md">
+<!-- Card 1: Completed -->
+<div class="interactive-card relative w-full bg-surface-container-low rounded-xl border border-primary-fixed/10 p-4 flex items-center justify-between overflow-hidden group cursor-pointer">
+<!-- Progress indicator background -->
+<div class="absolute inset-y-0 left-0 bg-primary-fixed/5 w-full transition-all duration-500 ease-out z-0"></div>
+<div class="relative z-10 flex flex-col gap-1 w-full pr-4">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface group-hover:text-primary-fixed transition-colors">Lat Pulldown</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant">4 Sets • 10-12 Reps • 120 lbs</p>
+</div>
+<div class="relative z-10 flex-shrink-0">
+<button aria-label="Mark completed" class="w-8 h-8 rounded-full border-2 border-primary-fixed bg-primary-fixed flex items-center justify-center text-background glow-effect active:scale-90 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1; font-weight: 700;">check</span>
+</button>
+</div>
+</div>
+<!-- Card 2: Active -->
+<div class="interactive-card relative w-full bg-surface-container-high rounded-xl border border-primary-fixed/30 p-4 flex items-center justify-between overflow-hidden group cursor-pointer ring-1 ring-primary-fixed/20 shadow-[0_0_15px_rgba(195,244,0,0.1)]">
+<!-- Subtle active pulse -->
+<div class="absolute inset-y-0 left-0 w-1 bg-primary-fixed rounded-l-xl"></div>
+<div class="relative z-10 flex flex-col gap-1 w-full pl-2 pr-4">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-primary-fixed">Seated Row</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant">3 Sets • 12 Reps • 100 lbs</p>
+<div class="flex gap-2 mt-2">
+<span class="px-2 py-1 bg-primary-fixed/10 text-primary-fixed font-label-sm text-label-sm rounded-md border border-primary-fixed/20">Set 1: 12</span>
+<span class="px-2 py-1 bg-surface-variant text-on-surface-variant font-label-sm text-label-sm rounded-md border border-outline-variant/30">Set 2: -</span>
+<span class="px-2 py-1 bg-surface-variant text-on-surface-variant font-label-sm text-label-sm rounded-md border border-outline-variant/30">Set 3: -</span>
+</div>
+</div>
+<div class="relative z-10 flex-shrink-0">
+<button aria-label="Mark completed" class="w-8 h-8 rounded-full border-2 border-outline-variant bg-transparent flex items-center justify-center text-transparent hover:border-primary-fixed hover:text-primary-fixed/50 active:scale-90 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1; font-weight: 700;">check</span>
+</button>
+</div>
+</div>
+<!-- Card 3: Pending -->
+<div class="interactive-card relative w-full bg-surface-container-low rounded-xl border border-outline-variant/30 p-4 flex items-center justify-between overflow-hidden group cursor-pointer hover:border-outline-variant">
+<div class="relative z-10 flex flex-col gap-1 w-full pr-4 opacity-70 group-hover:opacity-100 transition-opacity">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Deadlift</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant">5 Sets • 5 Reps • 225 lbs</p>
+</div>
+<div class="relative z-10 flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+<button aria-label="Mark completed" class="w-8 h-8 rounded-full border-2 border-outline-variant bg-transparent flex items-center justify-center text-transparent hover:border-primary-fixed hover:text-primary-fixed/50 active:scale-90 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1; font-weight: 700;">check</span>
+</button>
+</div>
+</div>
+<!-- Card 4: Pending -->
+<div class="interactive-card relative w-full bg-surface-container-low rounded-xl border border-outline-variant/30 p-4 flex items-center justify-between overflow-hidden group cursor-pointer hover:border-outline-variant">
+<div class="relative z-10 flex flex-col gap-1 w-full pr-4 opacity-70 group-hover:opacity-100 transition-opacity">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Pull-ups</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant">3 Sets • AMRAP • Bodyweight</p>
+</div>
+<div class="relative z-10 flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+<button aria-label="Mark completed" class="w-8 h-8 rounded-full border-2 border-outline-variant bg-transparent flex items-center justify-center text-transparent hover:border-primary-fixed hover:text-primary-fixed/50 active:scale-90 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1; font-weight: 700;">check</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Finish Workout Button -->
+<div class="mt-4 pb-8 flex justify-center">
+<button class="w-full max-w-sm py-4 bg-surface-container-high border border-outline-variant/50 rounded-xl font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant hover:bg-primary-fixed hover:text-background hover:border-primary-fixed transition-all duration-300 active:scale-95 group flex items-center justify-center gap-2">
+<span>Finish Workout</span>
+<span class="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform" style="font-variation-settings: 'FILL' 1;">arrow_forward</span>
+</button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 pb-8 bg-surface-container-lowest/80 backdrop-blur-xl border-t border-outline-variant/20 z-50 rounded-t-xl">
+<!-- Diet: Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-fixed-dim active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">restaurant</span>
+<span class="font-label-sm text-label-sm">Diet</span>
+</a>
+<!-- Workouts: Active -->
+<a class="flex flex-col items-center justify-center text-primary-fixed bg-primary-fixed/10 rounded-full py-1 px-6 active:scale-90 transition-all duration-200 ring-1 ring-primary-fixed/20 relative" href="#">
+<div class="absolute -top-3 w-1 h-1 rounded-full bg-primary-fixed shadow-[0_0_8px_rgba(195,244,0,0.8)]"></div>
+<span class="material-symbols-outlined mb-1 text-primary-fixed" style="font-variation-settings: 'FILL' 1;">fitness_center</span>
+<span class="font-label-sm text-label-sm text-primary-fixed font-bold">Workouts</span>
+</a>
+<!-- Metrics: Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary-fixed-dim active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">monitoring</span>
+<span class="font-label-sm text-label-sm">Metrics</span>
+</a>
+</nav>
+<!-- Web/Desktop Navigation (Hidden on mobile) -->
+<nav class="hidden md:flex fixed top-0 right-0 h-16 items-center px-margin-page gap-8 z-[51]">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary-fixed transition-colors" href="#">Diet</a>
+<a class="font-label-sm text-label-sm text-primary-fixed font-bold border-b-2 border-primary-fixed pb-1" href="#">Workouts</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary-fixed transition-colors" href="#">Metrics</a>
+</nav>
+<script>
+        // Simple script to toggle checkboxes for prototype demonstration
+        document.addEventListener('DOMContentLoaded', () => {
+            const checkButtons = document.querySelectorAll('button[aria-label="Mark completed"]');
+            
+            checkButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent card click
+                    const isChecked = btn.classList.contains('bg-primary-fixed');
+                    
+                    if (isChecked) {
+                        btn.classList.remove('bg-primary-fixed', 'border-primary-fixed', 'text-background', 'glow-effect');
+                        btn.classList.add('bg-transparent', 'border-outline-variant', 'text-transparent');
+                    } else {
+                        btn.classList.remove('bg-transparent', 'border-outline-variant', 'text-transparent');
+                        btn.classList.add('bg-primary-fixed', 'border-primary-fixed', 'text-background', 'glow-effect');
+                    }
+                });
+            });
+        });
+    </script>
+</body></html>
