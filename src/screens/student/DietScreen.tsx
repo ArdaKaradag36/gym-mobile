@@ -16,10 +16,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StudentScreenShell } from '../../components/student/StudentScreenShell';
 import { formatKcal, sumFoodMacros } from '../../forms/macros';
 import type { StudentDietStackParamList } from '../../navigation/StudentDietStack';
+import { visibleMealsForDay } from '../../services/workouts';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { useStudentDayStore } from '../../stores/useStudentDayStore';
+import { isProgramEnded, useStudentDayStore } from '../../stores/useStudentDayStore';
 import { formatShortDate, todayIsoDate } from '../../utils/format';
 import { screenBottomPadding } from '../../utils/layout';
 
@@ -29,7 +30,11 @@ export function DietScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const studentId = useAuthStore((state) => state.profile?.id);
-  const { days, loading, error, load } = useStudentDayStore();
+  const days = useStudentDayStore((state) => state.days);
+  const loading = useStudentDayStore((state) => state.loading);
+  const error = useStudentDayStore((state) => state.error);
+  const program = useStudentDayStore((state) => state.program);
+  const load = useStudentDayStore((state) => state.load);
 
   const refresh = useCallback(() => {
     if (studentId) void load(studentId);
@@ -38,8 +43,9 @@ export function DietScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       if (!studentId) return;
-      const hasData = useStudentDayStore.getState().days.length > 0;
-      void load(studentId, { silent: hasData });
+      const state = useStudentDayStore.getState();
+      if (state.updatingId) return;
+      void load(studentId, { silent: state.days.length > 0 });
     }, [load, studentId]),
   );
 
@@ -57,12 +63,18 @@ export function DietScreen({ navigation }: Props) {
         {error ? (
           <Text style={{ color: colors.error, fontFamily: 'Inter_400Regular' }}>{error}</Text>
         ) : null}
+        {isProgramEnded(program) ? (
+          <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular' }}>
+            Program bitti
+          </Text>
+        ) : null}
         {loading && days.length === 0 ? <ActivityIndicator color={colors.neonGreen} /> : null}
 
         {days.map((day) => {
+          const meals = visibleMealsForDay(day);
           const done =
-            day.daily_diets.length > 0 && day.daily_diets.every((item) => item.is_completed);
-          const visibleFoods = day.daily_diets.flatMap((meal) =>
+            meals.length > 0 && meals.every((item) => item.is_completed);
+          const visibleFoods = meals.flatMap((meal) =>
             (meal.diet_foods ?? []).filter(
               (food) => day.is_training_day || !food.training_day_only,
             ),
@@ -86,7 +98,7 @@ export function DietScreen({ navigation }: Props) {
                   {day.date === today ? ' · Bugün' : ''}
                 </Text>
                 <Text style={[styles.meta, { color: colors.onSurfaceVariant }]}>
-                  {day.daily_diets.length} öğün
+                  {meals.length} öğün
                   {kcal > 0 ? ` · ${formatKcal(kcal)} kcal` : ''}
                 </Text>
               </View>

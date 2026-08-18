@@ -18,7 +18,7 @@ import type { StudentWorkoutsStackParamList } from '../../navigation/StudentWork
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { useStudentDayStore } from '../../stores/useStudentDayStore';
+import { isProgramEnded, useStudentDayStore } from '../../stores/useStudentDayStore';
 import { formatShortDate, todayIsoDate } from '../../utils/format';
 import { screenBottomPadding } from '../../utils/layout';
 
@@ -28,7 +28,11 @@ export function WorkoutsScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const studentId = useAuthStore((state) => state.profile?.id);
-  const { days, loading, error, load } = useStudentDayStore();
+  const days = useStudentDayStore((state) => state.days);
+  const loading = useStudentDayStore((state) => state.loading);
+  const error = useStudentDayStore((state) => state.error);
+  const program = useStudentDayStore((state) => state.program);
+  const load = useStudentDayStore((state) => state.load);
 
   const refresh = useCallback(() => {
     if (studentId) void load(studentId);
@@ -37,8 +41,9 @@ export function WorkoutsScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       if (!studentId) return;
-      const hasData = useStudentDayStore.getState().days.length > 0;
-      void load(studentId, { silent: hasData });
+      const state = useStudentDayStore.getState();
+      if (state.updatingId) return;
+      void load(studentId, { silent: state.days.length > 0 });
     }, [load, studentId]),
   );
 
@@ -55,6 +60,11 @@ export function WorkoutsScreen({ navigation }: Props) {
         <Text style={[styles.title, { color: colors.onSurface }]}>14 günlük antrenman</Text>
         {error ? (
           <Text style={{ color: colors.error, fontFamily: 'Inter_400Regular' }}>{error}</Text>
+        ) : null}
+        {isProgramEnded(program) ? (
+          <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular' }}>
+            Program bitti
+          </Text>
         ) : null}
         {loading && days.length === 0 ? <ActivityIndicator color={colors.neonGreen} /> : null}
 

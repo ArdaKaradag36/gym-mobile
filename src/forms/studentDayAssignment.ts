@@ -175,7 +175,7 @@ export function assignmentFromServer(
         daily_note: unpacked.perDay[index] || loaded.daily_note || '',
         water_goal: loaded.water_goal != null ? String(loaded.water_goal) : '4000',
         is_rest_day: loaded.is_rest_day,
-        is_training_day: loaded.is_training_day,
+        is_training_day: !loaded.is_rest_day,
         workouts:
           loaded.daily_workouts.length > 0
             ? loaded.daily_workouts.map((workout) => ({

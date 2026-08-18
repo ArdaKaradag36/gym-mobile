@@ -240,33 +240,6 @@ export function ExercisePickerModal({
   );
 }
 
-/** Template editor gibi tek satırlı yerler için: tek overlay, parent state yoksa lokal. */
-export function ExercisePicker({
-  exercises,
-  selected,
-  onSelect,
-  loading = false,
-}: {
-  exercises: Exercise[];
-  selected: Exercise | null;
-  onSelect: (exercise: Exercise) => void;
-  loading?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <ExercisePickerButton selected={selected} onPress={() => setOpen(true)} loading={loading} />
-      <ExercisePickerModal
-        visible={open}
-        exercises={exercises}
-        selectedId={selected?.id}
-        onSelect={onSelect}
-        onClose={() => setOpen(false)}
-      />
-    </>
-  );
-}
-
 const styles = StyleSheet.create({
   trigger: {
     minHeight: 56,

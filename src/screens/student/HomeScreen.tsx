@@ -22,6 +22,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { daysLeftInProgram, useStudentDayStore } from '../../stores/useStudentDayStore';
 import { useStudentProfileContext } from '../../components/student/StudentProfileProvider';
+import { visibleMealsForDay } from '../../services/workouts';
 import { daysBetweenIso, todayIsoDate } from '../../utils/format';
 import { screenBottomPadding } from '../../utils/layout';
 
@@ -30,7 +31,13 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const studentId = useAuthStore((state) => state.profile?.id);
   const { profile } = useStudentProfileContext();
-  const { today, program, loading, error, load, adjustWater } = useStudentDayStore();
+  const today = useStudentDayStore((state) => state.today);
+  const program = useStudentDayStore((state) => state.program);
+  const loading = useStudentDayStore((state) => state.loading);
+  const error = useStudentDayStore((state) => state.error);
+  const load = useStudentDayStore((state) => state.load);
+  const adjustWater = useStudentDayStore((state) => state.adjustWater);
+  const flushPendingWater = useStudentDayStore((state) => state.flushPendingWater);
   const [inbox, setInbox] = useState<StudentNote[]>([]);
 
   const refresh = useCallback(() => {
@@ -49,18 +56,23 @@ export function HomeScreen() {
       .catch(() => setInbox([]));
   }, [studentId]);
 
+  useEffect(() => {
+    return () => {
+      void useStudentDayStore.getState().flushPendingWater();
+    };
+  }, [flushPendingWater]);
+
   useFocusEffect(
     useCallback(() => {
       if (!studentId) return;
-      const hasData = Boolean(
-        useStudentDayStore.getState().today || useStudentDayStore.getState().days.length,
-      );
-      void load(studentId, { silent: hasData });
+      const state = useStudentDayStore.getState();
+      if (state.updatingId) return;
+      void load(studentId, { silent: Boolean(state.today || state.days.length) });
     }, [load, studentId]),
   );
 
-  const workouts = today?.daily_workouts ?? [];
-  const meals = today?.daily_diets ?? [];
+  const workouts = today?.is_rest_day ? [] : (today?.daily_workouts ?? []);
+  const meals = today ? visibleMealsForDay(today) : [];
   const workoutDone = workouts.filter((item) => item.is_completed).length;
   const mealsDone = meals.filter((item) => item.is_completed).length;
   const dayIndex = program?.start_date
@@ -130,7 +142,7 @@ export function HomeScreen() {
           />
           <SummaryCard
             label="Su"
-            value={`${Math.round(Number(today?.water_consumed ?? 0) / 100) * 100}`}
+            value={`${Number(today?.water_consumed ?? 0)}`}
             hint={`${Math.round(Number(today?.water_goal ?? 4000))} ml hedef`}
           />
         </View>

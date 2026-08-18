@@ -31,7 +31,11 @@ export function WorkoutDayScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const studentId = useAuthStore((state) => state.profile?.id);
-  const { days, loading, updatingId, load, toggleWorkout } = useStudentDayStore();
+  const days = useStudentDayStore((state) => state.days);
+  const loading = useStudentDayStore((state) => state.loading);
+  const updatingId = useStudentDayStore((state) => state.updatingId);
+  const load = useStudentDayStore((state) => state.load);
+  const toggleWorkout = useStudentDayStore((state) => state.toggleWorkout);
 
   const refresh = useCallback(() => {
     if (studentId) void load(studentId);
@@ -40,8 +44,9 @@ export function WorkoutDayScreen({ navigation, route }: Props) {
   useFocusEffect(
     useCallback(() => {
       if (!studentId) return;
-      const hasData = useStudentDayStore.getState().days.length > 0;
-      void load(studentId, { silent: hasData });
+      const state = useStudentDayStore.getState();
+      if (state.updatingId) return;
+      void load(studentId, { silent: state.days.length > 0 });
     }, [load, studentId]),
   );
 
@@ -103,9 +108,8 @@ export function WorkoutDayScreen({ navigation, route }: Props) {
           <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular' }}>
             Bugün dinlenme günü.
           </Text>
-        ) : null}
-
-        {groups.map((group) => (
+        ) : (
+          groups.map((group) => (
           <View key={group.key} style={styles.group}>
             <Text style={[styles.groupTitle, { color: colors.neonGreen }]}>
               {muscleGroupLabel(group.key)}
@@ -123,7 +127,8 @@ export function WorkoutDayScreen({ navigation, route }: Props) {
               ))}
             </View>
           </View>
-        ))}
+          ))
+        )}
 
         {!loading && !day?.is_rest_day && groups.length === 0 ? (
           <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular' }}>

@@ -70,11 +70,15 @@ export function NoteToTrainer({ studentId, trainerId, notes, onSent }: Props) {
           {sending ? (
             <ActivityIndicator color={colors.onPrimary} />
           ) : (
-            <Text style={[styles.sendText, { color: colors.onPrimary }]}>Gönder</Text>
+            <Text style={[styles.sendText, { color: colors.onPrimary }]}>
+              {error ? 'Tekrar dene' : 'Gönder'}
+            </Text>
           )}
         </Pressable>
       </View>
-      {error ? <Text style={{ color: colors.error, fontFamily: 'Inter_400Regular' }}>{error}</Text> : null}
+      {error ? (
+        <Text style={{ color: colors.error, fontFamily: 'Inter_400Regular' }}>{error}</Text>
+      ) : null}
       {latest ? (
         <Text style={[styles.latest, { color: colors.onSurfaceVariant }]}>
           Son: {latest.body} · {formatNoteTime(latest.created_at)}

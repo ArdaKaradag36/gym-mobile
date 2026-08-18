@@ -134,11 +134,11 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   cardHit: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     zIndex: 1,
   },
   completedWash: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
   },
   activeBar: {
     position: 'absolute',

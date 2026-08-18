@@ -26,9 +26,6 @@ export const colors = {
   tabInactive: '#8E9379',
 } as const;
 
-/** Locked Forge dark palette — light mode is intentionally unsupported. */
-export const kineticDark = colors;
-
 export type ThemeColors = typeof colors;
 
 export const spacing = {

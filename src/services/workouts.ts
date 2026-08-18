@@ -4,13 +4,12 @@ import type {
   DailyWorkout,
   DietFood,
   Exercise,
-  MealType,
   Profile,
   Program,
 } from '../types/database';
+import { MEAL_LABELS } from '../types/database';
 import { PLAN_EMBED, PROFILE_COLUMNS, PROGRAM_COLUMNS } from './queries';
 import { isSupabaseConfigured, supabase } from './supabaseClient';
-import { todayIsoDate } from '../utils/format';
 import { sortStudentWorkouts } from '../utils/workoutSort';
 
 export type WorkoutWithExercise = DailyWorkout & {
@@ -37,13 +36,6 @@ export type StudentProgramBundle = {
   program: Program;
   days: StudentPlanDay[];
 };
-
-function unwrapProgram(
-  programs: { id: string; student_id: string } | { id: string; student_id: string }[] | null | undefined,
-): { id: string; student_id: string } | null {
-  if (!programs) return null;
-  return Array.isArray(programs) ? programs[0] ?? null : programs;
-}
 
 function unwrapOne<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
@@ -81,6 +73,24 @@ function toStudentPlanDay(
   };
 }
 
+function isPlaceholderMealContent(content?: string | null, mealType?: string) {
+  const trimmed = content?.trim() ?? '';
+  if (!trimmed) return true;
+  if (mealType && trimmed === mealType) return true;
+  return trimmed in MEAL_LABELS;
+}
+
+export function visibleMealsForDay(day: StudentPlanDay) {
+  const isTrainingDay = day.is_training_day ?? true;
+  const visibleFoods = (mealFoods: DietFood[] | undefined) =>
+    (mealFoods ?? []).filter((food) => isTrainingDay || !food.training_day_only);
+
+  return [...(day.daily_diets ?? [])].filter((meal) => {
+    if (visibleFoods(meal.diet_foods).length > 0) return true;
+    return !isPlaceholderMealContent(meal.content, meal.meal_type);
+  });
+}
+
 export async function fetchStudentProfile(
   userId: string,
 ): Promise<StudentProfileWithTrainer | null> {
@@ -94,24 +104,6 @@ export async function fetchStudentProfile(
 
   if (error) throw error;
   return data as StudentProfileWithTrainer | null;
-}
-
-export async function fetchStudentActiveProgram(
-  studentId: string,
-): Promise<Program | null> {
-  if (!isSupabaseConfigured) return null;
-
-  const { data, error } = await supabase
-    .from('programs')
-    .select(PROGRAM_COLUMNS)
-    .eq('student_id', studentId)
-    .eq('status', 'active')
-    .order('start_date', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data as Program | null;
 }
 
 export async function fetchStudentProgramDays(
@@ -158,48 +150,6 @@ export async function fetchStudentProgramDays(
   return { program: typedProgram, days };
 }
 
-export async function fetchStudentPlanForDate(
-  studentId: string,
-  date: string,
-  options?: { activeOnly?: boolean },
-): Promise<StudentPlanDay | null> {
-  if (!isSupabaseConfigured) return null;
-
-  let query = supabase
-    .from('daily_plans')
-    .select(
-      `
-      ${PLAN_EMBED},
-      programs!inner ( id, student_id, status )
-    `,
-    )
-    .eq('date', date)
-    .eq('programs.student_id', studentId);
-
-  if (options?.activeOnly !== false) {
-    query = query.eq('programs.status', 'active');
-  }
-
-  const { data, error } = await query.maybeSingle();
-  if (error) throw error;
-  if (!data) return null;
-
-  const typed = data as unknown as DailyPlan & {
-    programs: { id: string; student_id: string } | { id: string; student_id: string }[];
-    daily_workouts?: WorkoutWithExercise[] | null;
-    daily_diets?: DietWithFoods[] | null;
-  };
-  const program = unwrapProgram(typed.programs);
-
-  return toStudentPlanDay(typed, program?.student_id ?? studentId);
-}
-
-export async function fetchTodaysWorkoutPlan(
-  studentId: string,
-): Promise<StudentPlanDay | null> {
-  return fetchStudentPlanForDate(studentId, todayIsoDate(), { activeOnly: true });
-}
-
 export async function updateWorkoutCompletion(
   workoutId: string,
   isCompleted: boolean,
@@ -209,25 +159,6 @@ export async function updateWorkoutCompletion(
   const { error } = await supabase
     .from('daily_workouts')
     .update({ is_completed: isCompleted })
-    .eq('id', workoutId);
-
-  if (error) throw error;
-}
-
-export async function updateWorkoutWeight(
-  workoutId: string,
-  actualWeightUsed: number | string | null,
-): Promise<void> {
-  if (!isSupabaseConfigured) return;
-
-  const { error } = await supabase
-    .from('daily_workouts')
-    .update({
-      actual_weight_used:
-        actualWeightUsed == null || actualWeightUsed === ''
-          ? null
-          : String(actualWeightUsed),
-    })
     .eq('id', workoutId);
 
   if (error) throw error;
@@ -260,19 +191,3 @@ export async function updatePlanWater(
 
   if (error) throw error;
 }
-
-export async function updatePlanNote(
-  planId: string,
-  dailyNote: string,
-): Promise<void> {
-  if (!isSupabaseConfigured) return;
-
-  const { error } = await supabase
-    .from('daily_plans')
-    .update({ daily_note: dailyNote })
-    .eq('id', planId);
-
-  if (error) throw error;
-}
-
-export type { MealType };

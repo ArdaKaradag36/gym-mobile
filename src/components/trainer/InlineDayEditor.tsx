@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Controller, useFieldArray, useWatch, type Control } from 'react-hook-form';
+import { Controller, useFieldArray, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { MuscleGroupPicker } from './MuscleGroupPicker';
@@ -20,6 +20,7 @@ type Mode = 'workout' | 'diet';
 
 type Props = {
   control: Control<AssignmentForm>;
+  setValue: UseFormSetValue<AssignmentForm>;
   dayIndex: number;
   exercises: Exercise[];
   foods?: Food[];
@@ -30,6 +31,7 @@ type Props = {
 
 export function InlineDayEditor({
   control,
+  setValue,
   dayIndex,
   exercises,
   foods = [],
@@ -38,6 +40,7 @@ export function InlineDayEditor({
   onPickFood,
 }: Props) {
   const { colors } = useTheme();
+  const isRestDay = useWatch({ control, name: `days.${dayIndex}.is_rest_day` });
 
   return (
     <View style={styles.wrap}>
@@ -58,28 +61,27 @@ export function InlineDayEditor({
               )}
             />
           </Field>
-          <View style={styles.row}>
-            <Controller
-              control={control}
-              name={`days.${dayIndex}.is_rest_day`}
-              render={({ field }) => (
+          <Controller
+            control={control}
+            name={`days.${dayIndex}.is_rest_day`}
+            render={({ field }) => (
+              <View style={styles.row}>
                 <View style={styles.switchBlock}>
-                  <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Dinlenme</Text>
-                  <Switch value={field.value} onValueChange={field.onChange} thumbColor={colors.neonGreen} />
+                  <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>
+                    {field.value ? 'Dinlenme' : 'Antrenman'}
+                  </Text>
+                  <Switch
+                    value={field.value}
+                    onValueChange={(next) => {
+                      field.onChange(next);
+                      setValue(`days.${dayIndex}.is_training_day`, !next, { shouldDirty: true });
+                    }}
+                    thumbColor={colors.neonGreen}
+                  />
                 </View>
-              )}
-            />
-            <Controller
-              control={control}
-              name={`days.${dayIndex}.is_training_day`}
-              render={({ field }) => (
-                <View style={styles.switchBlock}>
-                  <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Antrenman</Text>
-                  <Switch value={field.value} onValueChange={field.onChange} thumbColor={colors.electricBlue} />
-                </View>
-              )}
-            />
-          </View>
+              </View>
+            )}
+          />
         </>
       ) : (
         <Field label="Su hedefi (ml)" style={{ flex: 1 }}>
@@ -116,15 +118,19 @@ export function InlineDayEditor({
         />
       </Field>
 
-      {mode === 'workout' ? (
+      {mode === 'workout' && !isRestDay ? (
         <WorkoutRows
           control={control}
           dayIndex={dayIndex}
           exercises={exercises}
           onPickExercise={onPickExercise}
         />
-      ) : (
+      ) : mode === 'diet' ? (
         <DietRows control={control} dayIndex={dayIndex} foods={foods} onPickFood={onPickFood} />
+      ) : (
+        <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular' }}>
+          Dinlenme gününde egzersiz yazılmaz.
+        </Text>
       )}
     </View>
   );

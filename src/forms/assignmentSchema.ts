@@ -77,6 +77,14 @@ export function validateAssignment(values: z.infer<typeof assignmentFormSchema>)
         }
       }
     }
+    if (!day.is_rest_day) {
+      const hasExercise = day.workouts.some(
+        (workout) => workout.is_cardio || workout.exercise_id.trim(),
+      );
+      if (!hasExercise) {
+        return `Gün ${index + 1}: antrenman gününde en az bir egzersiz ekleyin.`;
+      }
+    }
     for (const meal of day.meals) {
       const missingFood = meal.foods.some((food) => !food.food_id.trim() && food.amount_grams.trim());
       if (missingFood) {

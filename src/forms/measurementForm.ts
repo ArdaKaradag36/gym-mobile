@@ -1,4 +1,3 @@
-import type { Measurement } from '../types/database';
 import { todayIsoDate } from '../utils/format';
 
 export type MeasurementFormValues = {
@@ -92,43 +91,6 @@ export function emptyMeasurementForm(): MeasurementFormValues {
     metabolic_age: '',
     fat_free_mass_kg: '',
     source: 'manual',
-  };
-}
-
-function num(value: number | null | undefined): string {
-  return value == null ? '' : String(value);
-}
-
-export function measurementToForm(row: Measurement): MeasurementFormValues {
-  return {
-    date: row.date,
-    measured_at: row.measured_at ?? '',
-    device: row.device ?? 'Tanita RD-545',
-    weight: num(row.weight),
-    weight_ideal: num(row.weight_ideal),
-    body_density: num(row.body_density),
-    bmi: num(row.bmi),
-    bmi_ideal: num(row.bmi_ideal),
-    muscle_kg: num(row.muscle_kg),
-    muscle_kg_ideal: num(row.muscle_kg_ideal),
-    mineral: num(row.mineral),
-    mineral_ideal: num(row.mineral_ideal),
-    protein: num(row.protein),
-    protein_ideal: num(row.protein_ideal),
-    fluid_kg: num(row.fluid_kg),
-    fluid_kg_ideal: num(row.fluid_kg_ideal),
-    fat_mass_kg: num(row.fat_mass_kg),
-    fat_mass_kg_ideal: num(row.fat_mass_kg_ideal),
-    body_fat_percent: num(row.body_fat_percent ?? row.body_fat),
-    body_fat_percent_ideal: num(row.body_fat_percent_ideal),
-    bmi_score: num(row.bmi_score),
-    muscle_score: num(row.muscle_score),
-    fluid_score: num(row.fluid_score),
-    bmr_score: num(row.bmr_score),
-    fat_score: num(row.fat_score),
-    metabolic_age: row.metabolic_age != null ? String(row.metabolic_age) : '',
-    fat_free_mass_kg: num(row.fat_free_mass_kg),
-    source: row.source ?? 'manual',
   };
 }
 

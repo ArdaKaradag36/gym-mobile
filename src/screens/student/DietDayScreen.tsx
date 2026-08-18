@@ -54,7 +54,11 @@ export function DietDayScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const studentId = useAuthStore((state) => state.profile?.id);
-  const { days, loading, updatingId, load, toggleMeal } = useStudentDayStore();
+  const days = useStudentDayStore((state) => state.days);
+  const loading = useStudentDayStore((state) => state.loading);
+  const updatingId = useStudentDayStore((state) => state.updatingId);
+  const load = useStudentDayStore((state) => state.load);
+  const toggleMeal = useStudentDayStore((state) => state.toggleMeal);
 
   const refresh = useCallback(() => {
     if (studentId) void load(studentId);
@@ -63,8 +67,9 @@ export function DietDayScreen({ navigation, route }: Props) {
   useFocusEffect(
     useCallback(() => {
       if (!studentId) return;
-      const hasData = useStudentDayStore.getState().days.length > 0;
-      void load(studentId, { silent: hasData });
+      const state = useStudentDayStore.getState();
+      if (state.updatingId) return;
+      void load(studentId, { silent: state.days.length > 0 });
     }, [load, studentId]),
   );
 

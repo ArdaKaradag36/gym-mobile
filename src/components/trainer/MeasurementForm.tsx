@@ -17,12 +17,12 @@ import {
   MEASUREMENT_FIELDS,
   type MeasurementFormValues,
 } from '../../forms/measurementForm';
+import { MeasurementHistory } from '../MeasurementHistory';
 import { insertMeasurement } from '../../services/measurements';
 import { parseTanitaPdf } from '../../services/pdfParse';
 import type { Measurement } from '../../types/database';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
-import { formatNumericDate } from '../../utils/format';
 
 type Props = {
   studentId: string;
@@ -176,7 +176,7 @@ export const MeasurementForm = forwardRef<MeasurementFormHandle, Props>(
           <ActivityIndicator color={colors.onPrimary} />
         ) : (
           <Text style={{ color: colors.onPrimary, fontFamily: 'Inter_600SemiBold' }}>
-            ONAYLA
+            Ölçümü kaydet
           </Text>
         )}
       </Pressable>
@@ -186,11 +186,12 @@ export const MeasurementForm = forwardRef<MeasurementFormHandle, Props>(
         </Text>
       ) : null}
 
-      {recent.slice(0, 3).map((row) => (
-        <Text key={row.id} style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular' }}>
-          {formatNumericDate(row.date)}: {row.weight ?? '—'} kg · %{row.body_fat_percent ?? row.body_fat ?? '—'}
-        </Text>
-      ))}
+      {recent.length > 0 ? (
+        <>
+          <Text style={[styles.historyTitle, { color: colors.onSurface }]}>Kayıtlı ölçümler</Text>
+          <MeasurementHistory rows={recent} />
+        </>
+      ) : null}
     </View>
   );
 },
@@ -237,5 +238,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  historyTitle: {
+    fontFamily: 'Montserrat_700Bold',
+    fontSize: 18,
+    marginTop: spacing.stackSm,
   },
 });

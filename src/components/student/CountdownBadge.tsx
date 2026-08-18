@@ -19,7 +19,7 @@ export function CountdownBadge({ daysLeft }: CountdownBadgeProps) {
     >
       <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>PROGRAM</Text>
       <Text style={[styles.value, { color: colors.neonGreen }]}>
-        {daysLeft == null ? 'Atanmadı' : `${daysLeft} gün kaldı`}
+        {daysLeft == null ? 'Atanmadı' : daysLeft < 0 ? 'Program bitti' : `${daysLeft} gün kaldı`}
       </Text>
     </View>
   );

@@ -10,7 +10,7 @@ export async function fetchStudentMeasurements(studentId: string): Promise<Measu
     .select(MEASUREMENT_COLUMNS)
     .eq('student_id', studentId)
     .order('date', { ascending: false })
-    .limit(30);
+    .order('measured_at', { ascending: false });
 
   if (error) throw error;
   return (data ?? []) as Measurement[];
