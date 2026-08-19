@@ -36,7 +36,8 @@ import { useExercises } from '../../hooks/useExercises';
 import { useFoods } from '../../hooks/useFoods';
 import { useUnsavedChangesGuard } from '../../navigation/useUnsavedChangesGuard';
 import type { TrainerStudentsStackParamList } from '../../navigation/TrainerStudentsStack';
-import { fetchTrainerPlanWindow, publishAssignment } from '../../services/trainer';
+import { fetchTrainerPlanWindow, fetchTrainers, publishAssignment, assignStudentTrainer } from '../../services/trainer';
+import { fetchStudentProfile } from '../../services/workouts';
 import { fetchStudentMeasurements } from '../../services/measurements';
 import { fetchStudentInbox, markStudentNotesRead } from '../../services/studentNotes';
 import {
@@ -74,6 +75,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const trainerId = useAuthStore((state) => state.profile?.id);
+  const actorRole = useAuthStore((state) => state.profile?.role);
   const setUnsavedLock = useTrainerStore((state) => state.setUnsavedLock);
   const setDiscardHandler = useTrainerStore((state) => state.setDiscardHandler);
   const { exercises } = useExercises();
@@ -92,6 +94,8 @@ export function StudentDetailScreen({ navigation, route }: Props) {
   const [workoutTemplates, setWorkoutTemplates] = useState<WorkoutTemplate[]>([]);
   const [dietTemplates, setDietTemplates] = useState<DietTemplate[]>([]);
   const [studentNotes, setStudentNotes] = useState<StudentNote[]>([]);
+  const [trainers, setTrainers] = useState<{ id: string; full_name: string | null }[]>([]);
+  const [assignedTrainerId, setAssignedTrainerId] = useState<string | null>(null);
   const [templateMuscle, setTemplateMuscle] = useState('');
   const [pickerIndex, setPickerIndex] = useState<number | null>(null);
   const [foodPicker, setFoodPicker] = useState<{ mealIndex: number; foodIndex: number } | null>(
@@ -124,19 +128,23 @@ export function StudentDetailScreen({ navigation, route }: Props) {
     if (!opts?.silent) setLoading(true);
     setError(null);
     try {
-      const [{ program: nextProgram, days }, measurementRows, wTemplates, dTemplates, inbox] =
+      const [{ program: nextProgram, days }, measurementRows, wTemplates, dTemplates, inbox, trainerRows, studentProfile] =
         await Promise.all([
           fetchTrainerPlanWindow(studentId),
           fetchStudentMeasurements(studentId),
           trainerId ? fetchWorkoutTemplates(trainerId) : Promise.resolve([]),
           trainerId ? fetchDietTemplates(trainerId) : Promise.resolve([]),
           fetchStudentInbox(studentId).catch(() => [] as StudentNote[]),
+          actorRole === 'admin' ? fetchTrainers() : Promise.resolve([]),
+          fetchStudentProfile(studentId).catch(() => null),
         ]);
       setProgram(nextProgram);
       setMeasurements(measurementRows);
       setWorkoutTemplates(wTemplates);
       setDietTemplates(dTemplates);
       setStudentNotes(inbox);
+      setTrainers(trainerRows.map((row) => ({ id: row.id, full_name: row.full_name })));
+      setAssignedTrainerId(studentProfile?.trainer_id ?? null);
       const nextForm = assignmentFromServer(nextProgram, days);
       reset(nextForm);
       setPeriodStart(nextForm.days[0]?.date ?? todayIsoDate());
@@ -146,7 +154,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
     } finally {
       if (!opts?.silent) setLoading(false);
     }
-  }, [reset, studentId, trainerId]);
+  }, [actorRole, reset, studentId, trainerId]);
 
   useEffect(() => {
     setDiscardHandler(() => {
@@ -161,9 +169,8 @@ export function StudentDetailScreen({ navigation, route }: Props) {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    if (tab === 'measurements' || !trainerId) return;
-    if (notesMarkedRef.current) return;
+  const markInboxRead = useCallback(() => {
+    if (!trainerId) return;
     if (!studentNotes.some((note) => !note.read_at)) return;
     notesMarkedRef.current = true;
     void markStudentNotesRead(studentId, trainerId).then(() => {
@@ -173,7 +180,7 @@ export function StudentDetailScreen({ navigation, route }: Props) {
         ),
       );
     });
-  }, [tab, trainerId, studentId, studentNotes]);
+  }, [studentId, studentNotes, trainerId]);
 
   useEffect(() => {
     setPickerIndex(null);
@@ -333,7 +340,47 @@ export function StudentDetailScreen({ navigation, route }: Props) {
           <Text style={{ color: colors.neonGreen, fontFamily: 'Inter_400Regular' }}>{notice}</Text>
         ) : null}
 
-        {tab !== 'measurements' ? <StudentInbox notes={studentNotes} /> : null}
+        {tab !== 'measurements' ? (
+          <StudentInbox notes={studentNotes} onMarkRead={markInboxRead} />
+        ) : null}
+
+        {actorRole === 'admin' && trainers.length > 0 ? (
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_600SemiBold' }}>
+              Antrenör ata{assignedTrainerId ? '' : ' · atanmamış'}
+            </Text>
+            <ScrollView horizontal contentContainerStyle={styles.days}>
+              {trainers.map((trainer) => {
+                const selected = assignedTrainerId === trainer.id;
+                return (
+                  <Pressable
+                    key={trainer.id}
+                    onPress={() => {
+                      void assignStudentTrainer(studentId, trainer.id).then(() => {
+                        setAssignedTrainerId(trainer.id);
+                      });
+                    }}
+                    style={[
+                      styles.templateChip,
+                      {
+                        borderColor: selected ? colors.neonGreen : colors.outlineVariant,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: selected ? colors.neonGreen : colors.electricBlueSoft,
+                        fontFamily: 'Inter_600SemiBold',
+                      }}
+                    >
+                      {trainer.full_name || 'Antrenör'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
 
         {tab !== 'measurements' ? (
           <>
@@ -369,6 +416,40 @@ export function StudentDetailScreen({ navigation, route }: Props) {
               )}
             />
 
+            <View style={styles.macroGrid}>
+              {(
+                [
+                  ['kcal_target', 'kcal'],
+                  ['protein_g', 'P antr.'],
+                  ['carb_g', 'K antr.'],
+                  ['fat_g', 'Y antr.'],
+                  ['protein_g_off', 'P din.'],
+                  ['carb_g_off', 'K din.'],
+                  ['fat_g_off', 'Y din.'],
+                ] as const
+              ).map(([name, label]) => (
+                <Controller
+                  key={name}
+                  control={control}
+                  name={name}
+                  render={({ field }) => (
+                    <View style={styles.macroField}>
+                      <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_600SemiBold', fontSize: 10 }}>
+                        {label}
+                      </Text>
+                      <TextInput
+                        value={field.value}
+                        onChangeText={field.onChange}
+                        keyboardType="numeric"
+                        placeholder="—"
+                        placeholderTextColor={colors.outline}
+                        style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant }]}
+                      />
+                    </View>
+                  )}
+                />
+              ))}
+            </View>
             <View style={styles.periodRow}>
               <TextInput
                 value={periodStart}
@@ -702,6 +783,17 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     paddingHorizontal: 12,
     fontFamily: 'Inter_400Regular',
+  },
+  macroGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  macroField: {
+    width: '23%',
+    flexGrow: 1,
+    minWidth: 72,
+    gap: 4,
   },
   periodRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   periodInput: { flex: 1 },

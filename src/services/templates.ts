@@ -103,53 +103,27 @@ export async function saveWorkoutTemplate(
 ): Promise<WorkoutTemplate> {
   const payload = {
     trainer_id: trainerId,
+    template_id: templateId ?? null,
     name: form.name.trim(),
     muscle_group: form.muscle_group.trim() || null,
+    items: form.items
+      .filter((item) => item.is_cardio || item.exercise_id.trim())
+      .map((item) => ({
+        exercise_id: item.exercise_id.trim() || null,
+        reps_scheme: item.is_cardio ? null : normalizeSetsReps(item.reps_scheme) || null,
+        rest_seconds: item.is_cardio ? null : parseOptionalNumber(item.rest_seconds),
+        weight_min: item.is_cardio ? null : parseOptionalNumber(item.weight_min),
+        weight_max: item.is_cardio ? null : parseOptionalNumber(item.weight_max),
+        is_cardio: item.is_cardio,
+        cardio_params: item.is_cardio ? item.cardio_params || null : null,
+        muscle_group: item.is_cardio ? 'cardio' : item.muscle_group || null,
+      })),
   };
 
-  let saved: WorkoutTemplate;
-
-  if (templateId) {
-    const { data, error } = await supabase
-      .from('workout_templates')
-      .update(payload)
-      .eq('id', templateId)
-      .select('id, trainer_id, name, muscle_group, created_at')
-      .single();
-    if (error) throw error;
-    saved = data as WorkoutTemplate;
-    await supabase.from('workout_template_items').delete().eq('template_id', templateId);
-  } else {
-    const { data, error } = await supabase
-      .from('workout_templates')
-      .insert(payload)
-      .select('id, trainer_id, name, muscle_group, created_at')
-      .single();
-    if (error) throw error;
-    saved = data as WorkoutTemplate;
-  }
-
-  const items = form.items
-    .filter((item) => item.is_cardio || item.exercise_id.trim())
-    .map((item, index) => ({
-      template_id: saved.id,
-      exercise_id: item.exercise_id.trim() || null,
-      order_index: index + 1,
-      reps_scheme: item.is_cardio ? null : normalizeSetsReps(item.reps_scheme) || null,
-      rest_seconds: item.is_cardio ? null : parseOptionalNumber(item.rest_seconds),
-      weight_min: item.is_cardio ? null : parseOptionalNumber(item.weight_min),
-      weight_max: item.is_cardio ? null : parseOptionalNumber(item.weight_max),
-      is_cardio: item.is_cardio,
-      cardio_params: item.is_cardio ? item.cardio_params || null : null,
-      muscle_group: item.is_cardio ? 'cardio' : item.muscle_group || null,
-    }));
-
-  if (items.length > 0) {
-    const { error } = await supabase.from('workout_template_items').insert(items);
-    if (error) throw error;
-  }
-
-  return saved;
+  const { data, error } = await supabase.rpc('save_workout_template', { payload });
+  if (error) throw error;
+  if (!data) throw new Error('Şablon kaydedilemedi.');
+  return data as WorkoutTemplate;
 }
 
 export async function saveDietTemplate(
@@ -157,73 +131,43 @@ export async function saveDietTemplate(
   form: DietTemplateForm,
   templateId?: string,
 ): Promise<DietTemplate> {
-  const payload = {
-    trainer_id: trainerId,
-    name: form.name.trim(),
-  };
-
-  let saved: DietTemplate;
-  if (templateId) {
-    const { data, error } = await supabase
-      .from('diet_templates')
-      .update(payload)
-      .eq('id', templateId)
-      .select('id, trainer_id, name, created_at')
-      .single();
-    if (error) throw error;
-    saved = data as DietTemplate;
-    await supabase.from('diet_template_meals').delete().eq('template_id', templateId);
-  } else {
-    const { data, error } = await supabase
-      .from('diet_templates')
-      .insert(payload)
-      .select('id, trainer_id, name, created_at')
-      .single();
-    if (error) throw error;
-    saved = data as DietTemplate;
-  }
-
   const foodUnits = await fetchFoodUnitMap(
     form.meals.flatMap((meal) => meal.foods.map((food) => food.food_id)),
   );
 
-  for (const [index, meal] of form.meals.entries()) {
-    const foods = meal.foods.filter((food) => food.food_id.trim());
-    if (foods.length === 0) continue;
+  const payload = {
+    trainer_id: trainerId,
+    template_id: templateId ?? null,
+    name: form.name.trim(),
+    meals: form.meals.flatMap((meal) => {
+      const foods = meal.foods.filter((food) => food.food_id.trim());
+      if (foods.length === 0) return [];
+      return [
+        {
+          meal_type: meal.meal_type,
+          foods: foods.map((food, foodIndex) => {
+            const qty = parseGrams(food.amount_grams);
+            const unit = foodUnits.get(food.food_id);
+            const grams = gramsFromQuantity(qty, unit);
+            return {
+              food_id: food.food_id.trim() || null,
+              food_name: food.food_name.trim() || 'Besin',
+              amount: amountDisplayForSave(qty, unit),
+              amount_in_grams: grams > 0 ? grams : null,
+              note: food.note.trim() || null,
+              training_day_only: food.training_day_only,
+              order_index: foodIndex,
+            };
+          }),
+        },
+      ];
+    }),
+  };
 
-    const { data: mealRow, error: mealError } = await supabase
-      .from('diet_template_meals')
-      .insert({
-        template_id: saved.id,
-        meal_type: meal.meal_type,
-        sort_index: index,
-      })
-      .select('id')
-      .single();
-
-    if (mealError) throw mealError;
-
-    const { error: foodError } = await supabase.from('diet_template_foods').insert(
-      foods.map((food, foodIndex) => {
-        const qty = parseGrams(food.amount_grams);
-        const unit = foodUnits.get(food.food_id);
-        const grams = gramsFromQuantity(qty, unit);
-        return {
-          meal_id: mealRow.id,
-          food_id: food.food_id.trim() || null,
-          food_name: food.food_name.trim() || 'Besin',
-          amount: amountDisplayForSave(qty, unit),
-          amount_in_grams: grams > 0 ? grams : null,
-          note: food.note.trim() || null,
-          training_day_only: food.training_day_only,
-          order_index: foodIndex,
-        };
-      }),
-    );
-    if (foodError) throw foodError;
-  }
-
-  return saved;
+  const { data, error } = await supabase.rpc('save_diet_template', { payload });
+  if (error) throw error;
+  if (!data) throw new Error('Şablon kaydedilemedi.');
+  return data as DietTemplate;
 }
 
 export async function deleteWorkoutTemplate(templateId: string): Promise<void> {

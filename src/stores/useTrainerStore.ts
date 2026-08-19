@@ -5,6 +5,7 @@ import {
   setStudentActive,
   type TrainerStudent,
 } from '../services/trainer';
+import type { UserRole } from '../types/database';
 
 type TrainerState = {
   students: TrainerStudent[];
@@ -14,7 +15,7 @@ type TrainerState = {
   setUnsavedLock: (locked: boolean) => void;
   setDiscardHandler: (handler: (() => void) | null) => void;
   discardUnsaved: () => void;
-  load: (trainerId: string, opts?: { silent?: boolean }) => Promise<void>;
+  load: (trainerId: string, opts?: { silent?: boolean; role?: UserRole }) => Promise<void>;
   toggleActive: (studentId: string, isActive: boolean) => Promise<void>;
 };
 
@@ -38,7 +39,8 @@ export const useTrainerStore = create<TrainerState>((set, get) => ({
     if (!opts?.silent) set({ loading: true, error: null });
     else set({ error: null });
     try {
-      const students = await fetchTrainerStudents(trainerId);
+      const role = opts?.role;
+      const students = await fetchTrainerStudents(trainerId, role);
       set({ students, loading: false });
     } catch (err) {
       set({

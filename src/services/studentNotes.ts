@@ -14,13 +14,16 @@ export async function fetchStudentInbox(studentId: string): Promise<StudentNote[
   return (data ?? []) as StudentNote[];
 }
 
-export async function fetchUnreadNoteCounts(trainerId: string): Promise<Record<string, number>> {
+export async function fetchUnreadNoteCounts(
+  trainerId: string,
+  allStudents = false,
+): Promise<Record<string, number>> {
   if (!isSupabaseConfigured) return {};
-  const { data, error } = await supabase
-    .from('student_notes')
-    .select('student_id')
-    .eq('trainer_id', trainerId)
-    .is('read_at', null);
+  let query = supabase.from('student_notes').select('student_id').is('read_at', null);
+  if (!allStudents) {
+    query = query.eq('trainer_id', trainerId);
+  }
+  const { data, error } = await query;
   if (error) throw error;
   const counts: Record<string, number> = {};
   for (const row of data ?? []) {

@@ -61,6 +61,7 @@ export function StudentCard({ student, onPress, onToggleActive }: StudentCardPro
             </Text>
             <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
               {student.is_active ? 'Aktif' : 'Pasif'}
+              {!student.trainer_id ? ' · Atanmamış' : ''}
               {status.totalWorkouts > 0
                 ? ` · ${status.completedCount}/${status.totalWorkouts} egzersiz`
                 : ' · Bugün plan yok'}

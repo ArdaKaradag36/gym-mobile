@@ -147,11 +147,17 @@ export function HomeScreen() {
           />
         </View>
 
-        <WaterStepper
-          consumed={Number(today?.water_consumed ?? 0)}
-          goal={Number(today?.water_goal ?? 4000)}
-          onAdjust={(delta) => void adjustWater(delta)}
-        />
+        {today ? (
+          <WaterStepper
+            consumed={Number(today.water_consumed ?? 0)}
+            goal={Number(today.water_goal ?? 4000)}
+            onAdjust={(delta) => void adjustWater(delta)}
+          />
+        ) : (
+          <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular' }}>
+            Bugün için aktif program yok. Antrenörün ONAYLA yapınca su ve antrenman görünür.
+          </Text>
+        )}
 
         <View style={styles.spacer} />
         <CountdownBadge daysLeft={daysLeftInProgram(program)} />

@@ -73,24 +73,16 @@ export function WorkoutExerciseCard({
         ) : null}
       </View>
 
-      <Pressable
-        accessibilityLabel={exerciseName}
-        disabled={busy}
-        onPress={onToggleComplete}
-        onLongPress={isCardio ? undefined : () => void Linking.openURL(videoUrl)}
-        style={styles.cardHit}
-      />
-
-      {isCardio ? null : (
+      {videoUrl ? (
         <Pressable
           accessibilityLabel="Video"
           hitSlop={8}
-          onPress={() => void Linking.openURL(videoUrl)}
+          onPress={() => void Linking.openURL(videoUrl).catch(() => undefined)}
           style={styles.hiddenVideo}
         >
           <MaterialIcons name="play-circle-outline" size={18} color={colors.outline} />
         </Pressable>
-      )}
+      ) : null}
 
       <Pressable
         accessibilityRole="checkbox"
@@ -132,10 +124,6 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingRight: 28,
     paddingBottom: 40,
-  },
-  cardHit: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1,
   },
   completedWash: {
     ...StyleSheet.absoluteFillObject,

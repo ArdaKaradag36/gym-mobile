@@ -62,6 +62,9 @@ export type AssignmentForm = {
   protein_g: string;
   carb_g: string;
   fat_g: string;
+  protein_g_off: string;
+  carb_g_off: string;
+  fat_g_off: string;
   days: DayAssignment[];
 };
 
@@ -131,6 +134,9 @@ export function emptyAssignmentForm(startDate = todayIsoDate()): AssignmentForm 
     protein_g: '',
     carb_g: '',
     fat_g: '',
+    protein_g_off: '',
+    carb_g_off: '',
+    fat_g_off: '',
     days: Array.from({ length: PROGRAM_LENGTH_DAYS }, (_, index) =>
       emptyDay(addDaysIso(startDate, index)),
     ),
@@ -156,6 +162,9 @@ export function assignmentFromServer(
     protein_g: program?.protein_g != null ? String(program.protein_g) : '',
     carb_g: program?.carb_g != null ? String(program.carb_g) : '',
     fat_g: program?.fat_g != null ? String(program.fat_g) : '',
+    protein_g_off: program?.protein_g_off != null ? String(program.protein_g_off) : '',
+    carb_g_off: program?.carb_g_off != null ? String(program.carb_g_off) : '',
+    fat_g_off: program?.fat_g_off != null ? String(program.fat_g_off) : '',
     days: base.days.map((placeholder, index) => {
       const loaded = byDate.get(placeholder.date);
       if (!loaded) {

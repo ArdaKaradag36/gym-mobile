@@ -1,8 +1,6 @@
-export const FORGE_YOUTUBE_URL = 'https://www.youtube.com/watch?v=dw0kt0TQJAY';
-
-export function exerciseVideoUrl(url?: string | null) {
+export function exerciseVideoUrl(url?: string | null): string | null {
   const trimmed = url?.trim();
-  return trimmed || FORGE_YOUTUBE_URL;
+  return trimmed || null;
 }
 
 export const MUSCLE_GROUPS = [

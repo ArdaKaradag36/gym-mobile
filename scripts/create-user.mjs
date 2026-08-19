@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 /**
  * Forge kullanıcı oluşturma scripti.
  *
- * 1) Aşağıdaki USER bloğunu doldur.
+ * 1) Aşağıdaki USER bloğunu doldur. Gerçek şifreleri commit etme.
  * 2) .env içine SUPABASE_SERVICE_ROLE_KEY ekle (Dashboard → Settings → API).
  * 3) Çalıştır: npm run create-user
  *
@@ -13,11 +13,11 @@ import { resolve } from 'node:path';
  * Öğrenciye hoca bağlamak için trainerEmail yaz.
  */
 const USER = {
-  email: 'arda12@gmail.com',
-  password: '123456',
-  fullName: 'Deniz Yılmaz',
+  email: '',
+  password: '',
+  fullName: '',
   role: 'student', // student | trainer | admin
-  trainerEmail: 'arda@gmail.com', // sadece student için, örn. arda@gmail.com
+  trainerEmail: '', // sadece student için
   isActive: true,
 };
 
@@ -68,7 +68,7 @@ const trainerEmail = String(USER.trainerEmail || '')
   .toLowerCase();
 
 if (!email || !email.includes('@')) fail('USER.email geçerli bir e-posta olmalı.');
-if (password.length < 6) fail('USER.password en az 6 karakter olmalı.');
+if (password.length < 8) fail('USER.password en az 8 karakter olmalı.');
 if (!fullName) fail('USER.fullName boş olamaz.');
 if (!['student', 'trainer', 'admin'].includes(role)) {
   fail("USER.role 'student', 'trainer' veya 'admin' olmalı.");
@@ -85,7 +85,7 @@ const { data: created, error: createError } = await admin.auth.admin.createUser(
   password,
   email_confirm: true,
   app_metadata: { role },
-  user_metadata: { full_name: fullName, role },
+  user_metadata: { full_name: fullName },
 });
 
 if (createError) {
@@ -104,11 +104,14 @@ if (createError) {
   const existing = usersPage.users.find((user) => user.email === email);
   if (!existing) fail(`Kullanıcı zaten var ama listede bulunamadı: ${email}`);
 
+  const nextUserMeta = { ...(existing.user_metadata ?? {}), full_name: fullName };
+  delete nextUserMeta.role;
+
   const { error: updateError } = await admin.auth.admin.updateUserById(existing.id, {
     password,
     email_confirm: true,
-    app_metadata: { role },
-    user_metadata: { full_name: fullName, role },
+    app_metadata: { ...(existing.app_metadata ?? {}), role },
+    user_metadata: nextUserMeta,
   });
   if (updateError) fail(`Mevcut kullanıcı güncellenemedi: ${updateError.message}`);
   userId = existing.id;

@@ -13,6 +13,9 @@ export const assignmentFormSchema = z.object({
   protein_g: z.string(),
   carb_g: z.string(),
   fat_g: z.string(),
+  protein_g_off: z.string(),
+  carb_g_off: z.string(),
+  fat_g_off: z.string(),
   days: z.array(
     z.object({
       planId: z.string().optional(),

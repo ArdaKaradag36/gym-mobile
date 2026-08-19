@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -22,6 +22,7 @@ import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useTrainerStore } from '../../stores/useTrainerStore';
+import { supabase } from '../../services/supabaseClient';
 import { screenBottomPadding } from '../../utils/layout';
 
 type Props = NativeStackScreenProps<TrainerStudentsStackParamList, 'StudentsList'>;
@@ -37,17 +38,34 @@ export function StudentsScreen({ navigation }: Props) {
   const focusedOnce = useRef(false);
 
   const refresh = useCallback(() => {
-    if (profile?.id) void load(profile.id);
-  }, [load, profile?.id]);
+    if (profile?.id) void load(profile.id, { role: profile.role });
+  }, [load, profile?.id, profile?.role]);
 
   useFocusEffect(
     useCallback(() => {
       if (!profile?.id) return;
       const silent = focusedOnce.current;
       focusedOnce.current = true;
-      void load(profile.id, { silent });
-    }, [load, profile?.id]),
+      void load(profile.id, { silent, role: profile.role });
+    }, [load, profile?.id, profile?.role]),
   );
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    const channel = supabase
+      .channel(`student-notes-${profile.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'student_notes' },
+        () => {
+          void load(profile.id, { silent: true, role: profile.role });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [load, profile?.id, profile?.role]);
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();

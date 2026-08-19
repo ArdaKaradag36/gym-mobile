@@ -1,17 +1,20 @@
 {
   "expo": {
-    "name": "gym-mobile",
+    "name": "FORGE",
     "slug": "gym-mobile",
+    "scheme": "forge",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.forge.gym"
     },
     "android": {
+      "package": "com.forge.gym",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#121212",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

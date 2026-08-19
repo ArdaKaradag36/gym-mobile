@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { signInWithEmail } from '../../services/authService';
+import { requestPasswordReset, signInWithEmail } from '../../services/authService';
 import { radii, spacing } from '../../theme/colors';
 import { useTheme } from '../../theme/ThemeContext';
 
@@ -24,9 +24,11 @@ export function AuthScreen() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const onSubmit = async () => {
     setError(null);
+    setNotice(null);
 
     if (!email.trim() || !password) {
       setError('E-posta ve şifre gerekli.');
@@ -40,6 +42,26 @@ export function AuthScreen() {
         setError(result.error);
         Alert.alert('Giriş başarısız', result.error);
       }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onForgot = async () => {
+    setError(null);
+    setNotice(null);
+    if (!email.trim()) {
+      setError('Şifre sıfırlamak için e-posta gir.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await requestPasswordReset(email);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      setNotice('Sıfırlama bağlantısı e-postana gönderildi.');
     } finally {
       setBusy(false);
     }
@@ -103,6 +125,9 @@ export function AuthScreen() {
           {error ? (
             <Text style={[styles.feedback, { color: colors.error }]}>{error}</Text>
           ) : null}
+          {notice ? (
+            <Text style={[styles.feedback, { color: colors.neonGreen }]}>{notice}</Text>
+          ) : null}
 
           <Pressable
             onPress={() => void onSubmit()}
@@ -120,6 +145,12 @@ export function AuthScreen() {
             ) : (
               <Text style={[styles.submitText, { color: colors.onPrimary }]}>Giriş</Text>
             )}
+          </Pressable>
+
+          <Pressable onPress={() => void onForgot()} disabled={busy}>
+            <Text style={[styles.forgot, { color: colors.electricBlueSoft }]}>
+              Şifremi unuttum
+            </Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -202,5 +233,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
+  },
+  forgot: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    textAlign: 'center',
+    paddingVertical: 8,
   },
 });

@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SegmentedControl } from '../../components/trainer/SegmentedControl';
 import { TrainerTopNavbar } from '../../components/trainer/TrainerTopNavbar';
-import { exerciseVideoUrl, muscleGroupLabel } from '../../constants/media';
+import { muscleGroupLabel } from '../../constants/media';
 import { formatKcal, formatMacroNumber, sumMealFoodMacros } from '../../forms/macros';
 import { useExercises } from '../../hooks/useExercises';
 import { useFoods } from '../../hooks/useFoods';
@@ -291,13 +291,15 @@ function ExercisesGrid({
               { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outlineVariant },
             ]}
           >
+            {item.youtube_url ? (
             <Pressable
               accessibilityLabel="Video"
-              onPress={() => void Linking.openURL(exerciseVideoUrl(item.youtube_url))}
+              onPress={() => void Linking.openURL(item.youtube_url!).catch(() => undefined)}
               style={styles.hiddenVideo}
             >
               <MaterialIcons name="play-circle-outline" size={18} color={colors.outline} />
             </Pressable>
+            ) : null}
             <Text style={[styles.cardTitle, { color: colors.onSurface }]}>{item.name}</Text>
             <Text style={{ color: colors.onSurfaceVariant, fontFamily: 'Inter_400Regular', fontSize: 12 }}>
               {muscleGroupLabel(item.category) || (item.is_cardio ? 'Kardiyo' : '—')}

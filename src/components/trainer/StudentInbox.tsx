@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
 
 import type { StudentNote } from '../../types/database';
 import { radii, spacing } from '../../theme/colors';
@@ -7,21 +7,23 @@ import { formatNoteTime } from '../../utils/format';
 
 type Props = {
   notes: StudentNote[];
+  onMarkRead?: () => void;
 };
 
-export function StudentInbox({ notes }: Props) {
+export function StudentInbox({ notes, onMarkRead }: Props) {
   const { colors } = useTheme();
   const unread = notes.filter((note) => !note.read_at).length;
 
   return (
-    <View
+    <Pressable
+      onPress={unread > 0 ? onMarkRead : undefined}
       style={[
         styles.card,
         { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outlineVariant },
       ]}
     >
       <Text style={[styles.label, { color: colors.electricBlueSoft }]}>
-        ÖĞRENCİ NOTLARI{unread > 0 ? ` · ${unread} yeni` : ''}
+        ÖĞRENCİ NOTLARI{unread > 0 ? ` · ${unread} yeni · dokunarak okundu işaretle` : ''}
       </Text>
       {notes.length === 0 ? (
         <Text style={[styles.empty, { color: colors.onSurfaceVariant }]}>Henüz not yok.</Text>
@@ -43,7 +45,7 @@ export function StudentInbox({ notes }: Props) {
           </View>
         ))
       )}
-    </View>
+    </Pressable>
   );
 }
 

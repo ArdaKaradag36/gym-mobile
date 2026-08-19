@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AccountSheet } from './AccountSheet';
 import { HalterciLogo } from './HalterciLogo';
 import { signOut } from '../services/authService';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -21,6 +22,7 @@ export function AppTopNavbar() {
   const insets = useSafeAreaInsets();
   const profile = useAuthStore((state) => state.profile);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const name = profile?.full_name?.trim() || 'Kullanıcı';
 
@@ -46,7 +48,7 @@ export function AppTopNavbar() {
       <View style={styles.brand}>
         <HalterciLogo size={28} color={colors.neonGreen} />
         <Text style={[styles.title, { color: colors.onSurface }]} numberOfLines={1}>
-          Spor Uygulaması
+          FORGE
         </Text>
       </View>
 
@@ -86,6 +88,19 @@ export function AppTopNavbar() {
             <Pressable
               onPress={() => {
                 setMenuOpen(false);
+                setAccountOpen(true);
+              }}
+              style={({ pressed }) => [
+                styles.logoutBtn,
+                { backgroundColor: pressed ? colors.surfaceContainerHigh : 'transparent' },
+              ]}
+            >
+              <MaterialIcons name="manage-accounts" size={18} color={colors.onSurface} />
+              <Text style={[styles.logoutText, { color: colors.onSurface }]}>Hesap</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setMenuOpen(false);
                 void signOut();
               }}
               style={({ pressed }) => [
@@ -99,6 +114,7 @@ export function AppTopNavbar() {
           </View>
         ) : null}
       </View>
+      <AccountSheet visible={accountOpen} onClose={() => setAccountOpen(false)} />
     </View>
   );
 }

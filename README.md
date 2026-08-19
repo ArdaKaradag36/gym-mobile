@@ -1,109 +1,169 @@
-# gym-mobile
+# FORGE
 
 Hoca / öğrenci spor takip uygulaması. **Expo SDK 54** + Supabase.
 
-Kayıt (signup) yok. Kullanıcıları `npm run create-user` ile eklersin.
+Kayıt (signup) yok. Hesapları sen `create-user` ile eklersin.
 
-## Gerekenler
+Şu an test hesapları:
 
-- Node.js 18 veya üzeri (`node -v`)
-- npm (Node ile gelir)
-- Telefonda **App Store / Play Store Expo Go** (SDK 54)
+- `arda@gmail.com` — antrenör
+- `arda12@gmail.com` — öğrenci (hocası `arda@gmail.com`)
 
-## 1. Repoyu al
+---
+
+## Sıfır bir bilgisayarda uygulamayı açmak
+
+Yeni bir laptop / PC. Hiçbir şey yüklü değil.
+
+### 1. Node.js
+
+[https://nodejs.org](https://nodejs.org) → **LTS** kur. Bitince terminalde:
+
+```bash
+node -v
+npm -v
+```
+
+`node` 18 veya üzeri olmalı.
+
+### 2. Git ve repo
 
 ```bash
 git clone https://github.com/ArdaKaradag36/gym-mobile.git
 cd gym-mobile
 ```
 
-## 2. Ortam dosyası
+### 3. Ortam dosyası
 
-`.env` GitHub’da yoktur. Proje kökünde (package.json ile aynı klasör) oluştur:
+GitHub’da `.env` yoktur. Proje kökünde (package.json ile aynı klasör):
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` içini doldur (Supabase Dashboard → Project Settings → API):
+`.env` içini doldur. Değerler: [Supabase Dashboard](https://supabase.com/dashboard) → Project Settings → API.
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` yalnız kullanıcı oluşturmak içindir. Uygulamaya ve `EXPO_PUBLIC_` ile koyma.
+Kullanıcı ekleyeceksen aynı dosyaya şunu da yaz (Dashboard → API → `service_role`). **Bunu `EXPO_PUBLIC_` yapma, uygulamaya koyma.**
+
+```
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+```
 
 `.env` değişince Metro’yu kapatıp yeniden aç.
 
-## 3. Bağımlılıklar
+### 4. Paketler
 
 ```bash
 npm install
 ```
 
-## 4. Çalıştır
+### 5. Çalıştır
 
 ```bash
 npm start
 ```
 
-### Web
+- **Web:** açılan terminalde `w` bas. Adres genelde http://localhost:8081
+- **Telefon:** App Store / Play Store’dan **Expo Go** kur (SDK 54). Telefon ve laptop aynı Wi‑Fi’de olsun. Terminaldeki **QR**’ı Expo Go ile oku.
 
-Açılan terminalde `w` bas. Adres: http://localhost:8081
-
-Doğrudan:
-
-```bash
-npm run web
-```
-
-### Telefon (Expo Go)
-
-1. Telefona **Expo Go** kur (App Store / Play Store — SDK 54).
-2. Telefon ve laptop **aynı Wi‑Fi**’de olsun.
-3. `npm start` çıktısındaki **QR**’ı Expo Go ile oku.
-
-Aynı ağda bağlanmazsa tünel:
+Aynı ağda bağlanmazsa:
 
 ```bash
 npx expo start --tunnel
 ```
 
-İlk tünelde ngrok isteyebilir. Bitince **yeni QR**’ı oku.
+iPhone’da Expo Go için “Yerel Ağ” iznini aç. VPN / Private Relay kapat.
 
-iPhone “Yerel Ağ” iznini Expo Go için aç. VPN / Private Relay kapat.
+Doğrudan web:
 
-## Kullanıcı eklemek
+```bash
+npm run web
+```
 
-`scripts/create-user.mjs` içindeki `USER` bloğunu doldur, `.env`’e service role anahtarını ekle, sonra:
+---
+
+## Bu bilgisayarda nasıl başlatırım
+
+Repo zaten `/home/ardakasalinux/software/gym-mobile` altında.
+
+```bash
+cd ~/software/gym-mobile
+npm start
+```
+
+`.env` yoksa veya Supabase hata veriyorsa:
+
+```bash
+cp .env.example .env
+```
+
+içini doldur, `npm start`’ı kapatıp tekrar aç.
+
+Telefonda QR, web’de `w`.
+
+---
+
+## Kullanıcı nasıl eklerim
+
+1. `.env` içinde `SUPABASE_SERVICE_ROLE_KEY` olsun.
+2. `scripts/create-user.mjs` dosyasını aç. En üstteki `USER` bloğunu doldur:
+
+```js
+const USER = {
+  email: 'ogrenci@ornek.com',
+  password: 'enaz8karakter',
+  fullName: 'Ad Soyad',
+  role: 'student', // student | trainer | admin
+  trainerEmail: 'arda@gmail.com', // öğrenciye hoca bağlamak için
+  isActive: true,
+};
+```
+
+3. Çalıştır:
 
 ```bash
 npm run create-user
 ```
 
-`role`: `student` | `trainer` | `admin`  
-Öğrenciye hoca bağlamak için `trainerEmail` yaz.
+Hoca eklerken `role: 'trainer'` yaz, `trainerEmail` boş bırak.
+
+Aynı e-posta zaten varsa script hesabı **günceller** (şifre dahil). Gerçek şifreyi dosyaya yazıp GitHub’a gönderme; işin bitince `USER` bloğunu tekrar boşalt.
+
+---
+
+## Mağaza paketi (şimdilik şart değil)
+
+Küçük salon için Expo Go yeter. APK / mağaza istersen paket adı `eas-cli`:
+
+```bash
+npx eas-cli login
+npx eas-cli build --platform android --profile preview
+```
+
+---
 
 ## Sorun olursa
 
 | Ne görürsün | Ne yap |
 | --- | --- |
-| `Supabase is not configured` | `.env` kökte mi, adı `.env` mi? Metro’yu yeniden başlat |
-| Expo Go: SDK uyumsuz | App Store Expo Go SDK 54 olmalı; bu repo SDK 54 |
-| QR açılmıyor / network lost | Aynı Wi‑Fi veya `npx expo start --tunnel` |
-| `Invalid login credentials` | Hesap bu Supabase projesinde yok; `create-user` ile ekle |
-| Beyaz ekran | `npm install` yaptın mı? Fontlar ~4 sn sonra yine yüklenir |
+| `Supabase is not configured` | `.env` kökte mi, adı tam `.env` mi? Metro’yu yeniden başlat |
+| Expo Go: SDK uyumsuz | Telefondaki Expo Go SDK 54 olmalı |
+| QR açılmıyor | Aynı Wi‑Fi veya `npx expo start --tunnel` |
+| `Invalid login credentials` | Hesap bu projede yok; `create-user` ile ekle |
+| Beyaz ekran | `npm install` yaptın mı? Fontlar birkaç saniye sürebilir |
 
-Cache temizleyip baştan:
+Cache temizliği:
 
 ```bash
 rm -rf node_modules .expo
 npm install
 npx expo start --clear
 ```
-
-Web için sonuna `--web` veya tünel için `--tunnel` ekle.
 
 ## Lisans
 

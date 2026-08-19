@@ -4,6 +4,7 @@ import type {
   Food,
   Profile,
   Program,
+  UserRole,
 } from '../types/database';
 import type { AssignmentForm } from '../forms/studentDayAssignment';
 import { normalizeSetsReps, parseSetsReps } from '../forms/setsReps';
@@ -115,17 +116,24 @@ function toStudentPlanDay(
 
 export async function fetchTrainerStudents(
   trainerId: string,
+  role?: UserRole,
 ): Promise<TrainerStudent[]> {
   if (!isSupabaseConfigured) return [];
 
   const today = todayIsoDate();
+  const isAdmin = role === 'admin';
 
-  const { data: students, error } = await supabase
+  let query = supabase
     .from('profiles')
     .select(PROFILE_COLUMNS)
-    .eq('trainer_id', trainerId)
     .eq('role', 'student')
     .order('full_name', { ascending: true });
+
+  if (!isAdmin) {
+    query = query.eq('trainer_id', trainerId);
+  }
+
+  const { data: students, error } = await query;
 
   if (error) throw error;
   if (!students?.length) return [];
@@ -178,7 +186,9 @@ export async function fetchTrainerStudents(
     }
   }
 
-  const unreadCounts = await fetchUnreadNoteCounts(trainerId).catch(() => ({} as Record<string, number>));
+  const unreadCounts = await fetchUnreadNoteCounts(trainerId, isAdmin).catch(
+    () => ({} as Record<string, number>),
+  );
 
   return (students as Profile[]).map((student) => {
     const status = statusFromPlan(
@@ -201,6 +211,27 @@ export async function setStudentActive(studentId: string, isActive: boolean): Pr
     .update({ is_active: isActive })
     .eq('id', studentId);
 
+  if (error) throw error;
+}
+
+export async function fetchTrainers(): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(PROFILE_COLUMNS)
+    .in('role', ['trainer', 'admin'])
+    .order('full_name', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Profile[];
+}
+
+export async function assignStudentTrainer(
+  studentId: string,
+  trainerId: string | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ trainer_id: trainerId })
+    .eq('id', studentId);
   if (error) throw error;
 }
 
@@ -344,6 +375,9 @@ export async function publishAssignment(params: {
     protein_g: parseOptionalNumber(params.form.protein_g),
     carb_g: parseOptionalNumber(params.form.carb_g),
     fat_g: parseOptionalNumber(params.form.fat_g),
+    protein_g_off: parseOptionalNumber(params.form.protein_g_off),
+    carb_g_off: parseOptionalNumber(params.form.carb_g_off),
+    fat_g_off: parseOptionalNumber(params.form.fat_g_off),
     trainer_notes: params.form.trainer_notes.trim() || null,
     daily_notes: packDailyNotes(
       params.form.trainer_notes,
